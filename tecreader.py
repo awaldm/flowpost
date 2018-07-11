@@ -33,7 +33,7 @@ def fn_timer(function):
     return function_timer
 
 
-def read_series(source_path, zone, varnames):
+def read_series(source_path, zone, varnames, szplt=False):
     if isinstance(source_path, str):
         filelist, num_files= get_sorted_filelist(source_path, 'plt')
     else:
@@ -44,22 +44,24 @@ def read_series(source_path, zone, varnames):
     start_time = time.time()
     f_r = []
     for i in range(len(filelist)):
-        _,_,_, data_i, dataset = load_tec_file(source_path + filelist[i], szplt=False, verbose=False, varnames=varnames, load_zones=zone, coords=False, deletezones=False, replace=True)
+       # _,_,_, data_i, dataset = load_tec_file(source_path + filelist[i], szplt=True, verbose=False, varnames=varnames, load_zones=zone, coords=False, deletezones=False, replace=True)
+        _,_,_, data_i, dataset = load_tec_file(filelist[i], szplt=szplt, verbose=True, varnames=varnames, load_zones=zone, coords=False, deletezones=False, replace=True)
+
         f_r.append(data_i)
 
     f_r = np.asarray(f_r)
     print('finished reading after ' + str(time.time()-start_time) + ' s')
     print('shape of result before transposition: ' + str(f_r.shape))
-    return f_r
+    return np.transpose(f_r, (1,0,2))
 
 
 def parallel_load_wrapper(input_arg):
-    (filename, zone, varnames) = input_arg
-    _,_,_,data_i,dataset = load_tec_file(filename, szplt=False, verbose=False, varnames=varnames, load_zones=zone, coords=False, deletezones=False, replace=True)
-    print data_i.shape
+    (filename, zone, varnames, szplt) = input_arg
+    _,_,_,data_i,dataset = load_tec_file(filename, szplt=szplt, verbose=False, varnames=varnames, load_zones=zone, coords=False, deletezones=False, replace=True)
+    print(data_i.shape)
     return data_i
 
-def read_series_parallel(source_path, zone, varnames, workers):
+def read_series_parallel(source_path, zone, varnames, workers, szplt=False):
     """ Reads a file list using multiple threads
     Parameters
     ----------
@@ -97,7 +99,8 @@ def read_series_parallel(source_path, zone, varnames, workers):
     print('reading zones: ' + str(zone))
     start_time = time.time()
     #print source_path
-    args = ((filelist[i], zone, varnames) for i in range(len(filelist)))
+    print(filelist[0])
+    args = ((filelist[i], zone, varnames, szplt) for i in range(len(filelist)))
     results = pool.map_async(parallel_load_wrapper, args)
     f_r = results.get()
     f_r = np.asarray(f_r)
@@ -140,7 +143,7 @@ def get_sorted_filelist(source_path, extension, sortkey='i', stride=10):
         num_files = 1
     newlist= []
     for file in filelist:
-        if (get_i(file) % 10) == 0:
+        if (get_i(file) % stride) == 0:
             newlist.append(file)
     num_files = len(newlist)
 
@@ -149,7 +152,10 @@ def get_sorted_filelist(source_path, extension, sortkey='i', stride=10):
 def get_i(s):
     temp= s.split('i=')[1]
     i = temp.split('.plt')[0]
-    i = i.split('_t=')[0]
+    if '_t=' in i:
+        i = i.split('_t=')[0]
+    else:
+        i = i.split('.plt')[0]
     return int(i)
 
 def get_t(s):
@@ -162,7 +168,24 @@ def get_domain(s):
     dom = temp.split('.plt')[0]
     return int(dom)
 
+def load_plt_series(plt_path, zone_no, varnames=None, parallel=0):
+    '''
+    call the serial or parallel series loaders
+    call the file list sorting routines
+    load one extra dataset
+    '''
+    filelist, num_files = get_sorted_filelist(plt_path, 'plt')
 
+    filelist = get_cleaned_filelist(filelist,start_i=start_i, end_i=end_i)
+
+    get_sorted_filelist(source_path, extension, sortkey='i', stride=10)
+
+    if parallel > 0:
+        in_data = read_series_parallel([plt_path + s for s in filelist], zone_no, varnames, parallel)
+    else:
+        in_data = read_series(plt_path, zone, varnames)
+
+    return coords, data
 
 
 def get_zones(dataset, keepzones='byname', zonenames=['hexa']):
@@ -220,9 +243,9 @@ def read_ungathered(source_path, load_zones=None, szplt=False, varnames=None, sh
             _,_,_,data_i, _ = load_tec_file(source_path + s, szplt=False, varnames=varnames, load_zones=load_zones, coords=False, verbose=False, deletezones=False, replace=True)
             data = np.vstack((data, data_i))
         except NameError:
-            print 'requested zone not found, no problem'
+            print('requested zone not found, no problem')
 
-    print data.shape
+    print(data.shape)
     print('velocity snapshot shape: ' + str(data.shape) + ', size ' + str(size_MB(data)) + ' MB')
 
 def get_cleaned_filelist(filelist, start_i, end_i):
@@ -534,8 +557,9 @@ def load_tec_file(filename, szplt=False, varnames=None, load_zones=[0,1], coords
 
     # load the actual data. in case of SZPLT all zones are loaded
     if szplt:
+        print('starting szplt loader')
         dataset = tp.data.load_tecplot_szl(filename, read_data_option=readoption)
-        get_zones(dataset, zones)
+        #get_zones(dataset, zones)
     else:
         if load_zones is not None:
             if not all(isinstance(x, (int)) for x in load_zones):
@@ -543,9 +567,10 @@ def load_tec_file(filename, szplt=False, varnames=None, load_zones=[0,1], coords
             dataset = tp.data.load_tecplot(filename, zones=load_zones, read_data_option=readoption)
         else:
             dataset = tp.data.load_tecplot(filename, read_data_option=readoption)
+    print('done loading')
     if verbose:
         tec_data_info(dataset)
-        print 'done with dataset info'
+        print('done with dataset info')
     # apparently tecplot appends to its dataset all the time, insteady of opening a new one
     # basically it adds the zones of each time step to the dataset, ending up with a lot of zones after a while
     # ---> use delete_zones?
@@ -576,7 +601,7 @@ def load_tec_file(filename, szplt=False, varnames=None, load_zones=[0,1], coords
     #load_zones = ['flunten', 'floben']
     if load_zones is not None:
         if verbose:
-            print 'zones to load: ' + str(load_zones)
+            print('zones to load: ' + str(load_zones))
         if any(isinstance(x, (str)) for x in load_zones):
             # load_zones is a list of strings
             zonelist = [Z for Z in dataset.zones() if Z.name in load_zones]
@@ -597,7 +622,7 @@ def load_tec_file(filename, szplt=False, varnames=None, load_zones=[0,1], coords
 #    for zone in dataset.zones():
     for zone in zonelist:
         if verbose:
-            print('zone: ' + str(zone.name) + ', rank: ' + str(zone.rank))
+            print('handling zone: ' + str(zone.name) + ', rank: ' + str(zone.rank) + ' with ' + str(len(varnames)) + ' variables')
 
         # each variable gets a column
         for var in range(len(varnames)):
@@ -606,14 +631,14 @@ def load_tec_file(filename, szplt=False, varnames=None, load_zones=[0,1], coords
                 b = np.array(array[:])
             else:
                 b = np.vstack((b, np.array(array[:])))
-            #print('shape of current array: ' + str(b.shape))
+            print('shape of current array b for zone ' + str(zone.name) + ' , before transpose: ' + str(b.shape))
         b = b.T
         if zone_no == 0:
             data = b
         else:
             if verbose:
                 print('before stacking data shape: ' + str(data.shape))
-            data = np.vstack((b, data))
+            data = np.vstack((data, b))
             if verbose:
                 print('after stacking: ' + str(data.shape))
         count = count + 1
@@ -629,7 +654,7 @@ def load_tec_file(filename, szplt=False, varnames=None, load_zones=[0,1], coords
             print('normal exception when deleting, no worries')    
     if verbose:
         print('\nload function done \n\n')
-        print data.shape
+        print(data.shape)
     return x,y,z,data, dataset
 
 
