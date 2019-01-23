@@ -85,8 +85,41 @@ def process_wake(plt_path, case_name, plane, zone_no, start_i=None, end_i=None, 
     return u,v,w,dataset
 
 
+def get_vert_line(xpos, x_WT, z_WT, u_WT, uu_WT, w_WT, ww_WT, ind_samples_u, ind_samples_w, num=250, zmin = -0.15, zmax=0.3):
+    # xpos can be a list. if so, then the returned values are 2D arrays
+    print('extracting ' + str(len(xpos)) + ' lines from ' + str(len(u_WT)) + ' cases')
+    if type(xpos) is not list and len(xpos) <= 1: xpos = [ xpos ]
+
+    ui = np.zeros([num, len(xpos)])
+    samp_u = np.zeros([num, len(xpos)])
+    samp_w = np.zeros([num, len(xpos)])
+    uu = np.zeros([num, len(xpos)])
+    wi = np.zeros([num, len(xpos)])
+    ww = np.zeros([num, len(xpos)])
 
 
+    # iterate over positions
+    for pos in range(len(xpos)):
+        print xpos[0]
+        x0, z0 = xpos[pos], zmin
+        x1, z1 = xpos[pos], zmax
+        print('extracting line from ('+str(x0)+', '+str(z0)+') to ('+str(x1)+', '+str(z1)+')')
+
+        # create line as interpolation targeti
+        xi, zi = np.linspace(x0, x1, num), np.linspace(z0, z1, num)
+        print('obtained line of shape ' + str(xi.shape))
+
+        # iterate over cases
+        ui[:, pos] = scipy.interpolate.griddata((x_WT, z_WT), u_WT, (xi, zi), method='cubic')
+        uu[:, pos] = scipy.interpolate.griddata((x_WT, z_WT), uu_WT, (xi, zi), method='cubic')
+        wi[:, pos] = scipy.interpolate.griddata((x_WT, z_WT), w_WT, (xi, zi), method='cubic')
+        ww[:, pos] = scipy.interpolate.griddata((x_WT, z_WT), ww_WT, (xi, zi), method='cubic')
+
+
+        samp_u[:, pos] = scipy.interpolate.griddata((x_WT, z_WT), ind_samples_u, (xi, zi), method='cubic')
+        samp_w[:, pos] = scipy.interpolate.griddata((x_WT, z_WT), ind_samples_w, (xi, zi), method='cubic')
+
+    return xi, zi, ui, uu, wi, ww, samp_u, samp_w
 
 ######################################################################
 if __name__ == "__main__":
@@ -374,7 +407,6 @@ if __name__ == "__main__":
         y = np.array(array[:]).T
         array = zone.values('Z')
         z = np.array(array[:]).T
-    np.savez(case_name+'_TS', x=x, z=z, u=u, v=v, w=w)
 
 
     offset = 0
