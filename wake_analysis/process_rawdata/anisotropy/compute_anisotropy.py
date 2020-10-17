@@ -48,7 +48,7 @@ if __name__ == "__main__":
     case_name = 'CRM_v38h_DDES_dt100_ldDLR_CFL2_eigval015_pswitch1_tau2017_2'
 
     # Plane name
-    plane = 'eta0603'
+    plane = 'eta0283'
 
     # Case type, mainly for reference attributes
     case_type = 'CRM_LSS'
@@ -95,7 +95,8 @@ if __name__ == "__main__":
     C, xb, yb = ws.compute_anisotropy_barycentric(ev)
 
 
-    print('shape of C: ' + str(C.shape))
+    #print('shape of C: ' + str(C.shape))
+    print('writing to ' + str(par.res_path))
 
 
 

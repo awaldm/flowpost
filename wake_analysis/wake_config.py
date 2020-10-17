@@ -57,7 +57,7 @@ class WakeCaseParams():
             self.plt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'example_data/')
 
             # Result output path
-            self.res_path = 'example_results/wake/'+plane+'/'
+            self.res_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'example_results/res/wake/'+plane+'/')
 
             # Desired start and end of time series
             self.start_i = 5000
