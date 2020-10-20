@@ -63,6 +63,8 @@ class WakeCaseParams():
             self.start_i = 5000
             self.end_i = 6000
 
+            self.start_t = 3.59944000e-01
+            self.end_t = 3.94554000e-01
             # Zone list to be passed to reader function
             self.zonelist = [11]
 

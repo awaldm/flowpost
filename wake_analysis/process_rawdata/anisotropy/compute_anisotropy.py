@@ -34,7 +34,6 @@ import pyTecIO_AW.tecreader as tecreader
 import matplotlib.pyplot as plt
 import wake_analysis.wake_config as conf
 import tecplot as tp
-import scipy.signal
 import wake_analysis.helpers.wake_stats as ws
 
 
