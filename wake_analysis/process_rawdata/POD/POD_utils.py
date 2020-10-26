@@ -1,3 +1,11 @@
+'''
+Utilities for POD computation in python. These need a lot of cleanup.
+
+
+Andreas Waldmann, 2017
+'''
+
+
 import tecplot as tp
 import numpy as np
 import pyTecIO_AW.tecreader as tecreader
@@ -15,19 +23,57 @@ def write_mode_plt(out_data, dataset, out_folder, filename, output_modes):
 
 
 def compute_POD(indata):
+    '''
+    Straightforward implementation of the POD algorithm using numpy only. I recommend using compute_POD_modred
+
+    Parameters
+    ----------
+
+    indata : numpy array
+        m, n input matrix with m points and n snapshots
+
+    Raises
+    ------
+
+
+    Returns
+    -------
+    modes : (m, n) numpy array
+        POD modes, each column is a mode
+    eigvals : numpy array
+        holds the vector of POD eigenvalues
+    eigvevs : numpy array
+        the matrix of POD eigenvectors
+    coeffs : numpy array
+        the vector of POD coefficients
+        
+
+
+    '''
+    # Temporal samples
     n_samples = indata.shape[-1]
 
+    # Assemble the correlation matrix C
     corrmat = np.dot(indata.T, indata) / n_samples
     print('shape of correlation matrix: ' + str(corrmat.shape))
+
+    # Carry out eigendecomposition of C
     eigvals, eigvecs = np.linalg.eig(corrmat)
     eigvals[::-1].sort()
+
+    # Compute POD modes from dot product of data and the eigenvectors: phi = Uv
     modes = np.dot(indata, eigvecs)
     eigvecs = eigvecs.T
+
+    # Normalize the modes
     for i in range(num_modes):
         #coeffs[:,i] = eigvecs[:,i] * np.sqrt(eigvals[i] * n_samples)
         #modes[:,i] = modes[:,i] / np.sqrt(eigvals[i] * n_samples)
         modes[:,i] = modes[:,i] / np.linalg.norm(modes[:,i], ord=2)
+
+    # Compute the POD mode coefficients
     coeffs = compute_coeffs(modes, indata)
+
     return modes, eigvals, eigvecs, coeffs
 
 
@@ -47,10 +93,6 @@ def compute_POD_modred(indata, num_modes):
     #corrmat = np.dot(indata, indata.T)
     #coeffs = compute_coeffs(modes, indata)
 
-    #print corrmat[0,:]
-
-
-    #print(eigvals)
 
     #import matplotlib.pyplot as plt
     #plt.scatter(range(20),eigvals[0:20])
@@ -161,6 +203,12 @@ def read_coeff(read_path = './AoA18_uflu/'):
     return data, vars
 
 def compute_coeffs(modes, indata):
+    '''
+    Compute POD coefficients from modes, i.e. performs the operation
+    U.T \cdot phi
+
+    The result is a 2D numpy array
+    '''
     return np.dot(indata.T, modes)
 
 
