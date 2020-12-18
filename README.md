@@ -3,3 +3,6 @@ This is a collection of scripts for computation and analysis of wake quantities.
 
 ## Installation
 Add the top level directory (i.e. TAU\_processing) to PYTHONPATH
+
+## IO
+the pyTecIO folder contains tecreader.py, which is a module for bindary Tecplot I/O. It is a link to the tec\_series repo, i.e. linked via git submodule add https://github.com/awaldm/tec\_series pyTecIO
