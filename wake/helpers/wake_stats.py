@@ -11,8 +11,9 @@ import numpy as np
 #import h5py as hdf
 import os, sys
 import pandas as pd
-import tecplot as tp
-import pyTecIO_AW.tecreader as tecreader
+#import tecplot as tp
+#import pyTecIO_AW.tecreader as tecreader
+import signal_fun.autocorr as ac
 
 ############################################################################
 
@@ -394,8 +395,8 @@ def compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw):
         #ev[::-1].sort()
         ev[:,i].sort()
         ev[:,i] = np.flip(ev[:,i])
-        if i == 0:
-            print(ev[:,i])
+        #if i == 0:
+            #print(ev[:,i])
 
     print('shape of ev: ' + str(ev.shape))
     #for i in range(num_points):
@@ -527,4 +528,50 @@ def get_quadrants(data_u, data_w):
             #sf[p,q] = uw
 
     return df, sf
+
+def compute_field_acf(data, maxlags=300):
+    '''
+    compute autocorrelation for entire field
+    reshape if necessary, return in original shape
+    '''
+
+    if data.ndim == 3:
+        #fields = np.zeros([rows*cols, n_samples, 1])
+        shape_flat = (data.shape[0] * data.shape[1], data.shape[2])
+        field = data.reshape(shape_flat)
+    else:
+        field = data
+
+    n_points = field.shape[0]
+    n_samples = field.shape[1]
+    print('n_points: ' + str(n_points))
+
+
+    acf = np.zeros([n_points, n_samples])
+    for i in range(n_points):
+        acf[i,:] = ac.autocorr(field[i,:])
+    return acf.reshape(data.shape)
+
+def compute_field_acf_index(data, threshold=0.2):
+    '''
+    compute for each field point the index at which the threshold drops below the specified value
+    this is basically part of the timescale computation, however for the purpose of determination of independent
+    samples this has its own purpose
+    '''
+    if data.ndim == 3:
+        #fields = np.zeros([rows*cols, n_samples, 1])
+        shape_flat = (data.shape[0] * data.shape[1], data.shape[2])
+        field = data.reshape(shape_flat)
+    else:
+        field = data
+    n_points = field.shape[0]
+    n_samples = field.shape[1]
+    print('n_points: ' + str(n_points))
+
+    ind = np.zeros([n_points])
+    for i in range(n_points):
+        ind[i] = np.argmax(field[i,:] <= threshold)
+    if data.ndim == 3:
+        ind = ind.reshape(data.shape[0], data.shape[1])
+    return ind
 

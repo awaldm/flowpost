@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='wake_analysis',
+setup(name='TAU_processing',
    version='0.1',
    author='Andreas Waldmann',
-   packages=['wake_analysis'])
+   packages=['wake', 'forces'])
