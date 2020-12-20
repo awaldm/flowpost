@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-import wake.helpers.wake_stats as ws
+import TAUpost.wake.helpers.wake_stats as ws
+from wake_config import WakeCaseParams
+import TAUpost.pyTecIO.tecreader as tecreader
 import os
 import numpy as np
 ###############################################################################
@@ -118,7 +120,7 @@ class AnisotropyData():
 
 
 @dataclass
-class ResultField():
+class WakeField():
     vel: FieldSeries = None
     vel_prime: FieldSeries = None
     dataset = None # Tecplot dataset
@@ -126,20 +128,61 @@ class ResultField():
     atensor: dict = None
     cs: str = 'AC'
     coords: Coordinates = None
+    param: WakeCaseParams = None
 
-    def set_coords(self, x, y, z):
-        self.coords = Coordinates(x=x, y=y, z=z)
+    #def set_coords(self, x, y, z):
+    #    self.coords = Coordinates(x=x, y=y, z=z)
+    def set_coords(self,x,y,z):
+        self.x = x
+        self.y = y
+        self.z = z
 
-    def compute_rstresses(self):
+    def rotate_CS(self, alpha, CSname):
+        ws.rotate_dataset(self.dataset, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        x_WT, z_WT = ws.transform_wake_coords(self.vel.x,self.vel.z, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        u_WT, w_WT = ws.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        self.vel.u = u_WT
+        self.vel.w = w_WT
+        self.cs = CSname
+
+
+        self.set_coords(x_WT, self.y, z_WT)
+
+    def compute_rstresses(self, do_save = False):
         #uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u,v,w)
         #self.rstresses = ReynoldsStress
         #self.rstresses.set_values()
         self.rstresses = ws.calc_rstresses(self.vel.u, self.vel.v, self.vel.w, return_dict=True)
+        self.rstresses['kt'] = 0.5* (self.rstresses['uu'] + self.rstresses['vv'] + self.rstresses['ww'])
+
         #print('d: ' + str(d))
         #self.rstresses.set_unnamed(d)
-        print(type(self.rstresses))
-        print(type(self.rstresses['uu']))
+        #print(type(self.rstresses))
+        #print(type(self.rstresses['uu']))
         #self.rstresses.uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u_WT,v,w_WT)
+        if do_save:
+            self.save_rstresses(self.rstresses, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
+
+    def save_rstresses(self, rstress, res_path = None, file_prefix = None):
+        if res_path is None:
+            res_path = self.param.res_path
+        if file_prefix is None:
+            file_prefix = self.param.case_name+'_' + self.param.plane_name
+        # Save the results
+
+        try:
+            os.makedirs(res_path, mode = 0o777, exist_ok = True)
+            print("Directory '%s' created successfully" %res_path)
+        except:
+            print("Directory '%s' can not be created"%res_path)
+
+        save_var= {'uu': rstress['uu'], 'vv': rstress['vv'], 'ww': rstress['ww'], \
+                'uv': rstress['uv'], 'uw': rstress['uw'], 'vw': rstress['vw'], 'kt': rstress['kt']}
+
+        filename = os.path.join(res_path, file_prefix + '_rstresses.plt')
+        tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
+
+
 
     def compute_fluctuations(self):
         self.vel.uprime, self.vel.vprime, self.vel.wprime = ws.compute_fluctuations(self.vel.u, self.vel.v, self.vel.w)
@@ -170,15 +213,12 @@ class ResultField():
         # Compute second and third invariants of the anisotropy tensor
         self.atensor = {'uu': a_uu, 'vv': a_vv, 'ww': a_ww, 'uv': a_uv, 'uw': a_uw, 'vw': a_vw}
 
-
-        #self.atensor.set_values(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
-
         invar2, invar3, ev = ws.compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
         # Compute barycentric coordinates
         C, xb, yb = ws.compute_anisotropy_barycentric(ev)
 
         if do_save:
-            self.save_anisotropy(par.res_path, par.case_name+'_'+par.plane_name, self.atensor, ev, C)
+            self.save_anisotropy(self.atensor, ev, C, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
 
     def save_plt():
         pass
@@ -191,30 +231,40 @@ class ResultField():
         return out
 
     def transform(self):
-        ws.rotate_dataset(self.dataset, par.x_PMR, par.z_PMR, par.aoa)
-        x_WT, z_WT = ws.transform_wake_coords(vel.x,vel.z, par.x_PMR, par.z_PMR, par.aoa)
-        u_WT, w_WT = ws.rotate_velocities(vel.u, vel.v, vel.w, par.x_PMR, par.z_PMR, par.aoa)
+        ws.rotate_dataset(self.dataset, param.x_PMR, param.z_PMR, param.aoa)
+        x_WT, z_WT = ws.transform_wake_coords(vel.x,vel.z, param.x_PMR, param.z_PMR, param.aoa)
+        u_WT, w_WT = ws.rotate_velocities(vel.u, vel.v, vel.w, param.x_PMR, param.z_PMR, param.aoa)
 
 
-    def save_anisotropy(res_path, file_prefix, atensor, ev, C):
-
+    def save_anisotropy(self, atensor, ev, C, res_path = None, file_prefix = None):
+        if res_path is None:
+            res_path = self.param.res_path
+        if file_prefix is None:
+            file_prefix = self.param.case_name+'_' + self.param.plane_name
         # Save the results
 
-        save_var= {'a_uu': a_uu, 'a_vv': a_vv, 'a_ww': a_ww, \
-                'a_uv': a_uv, 'a_uw': a_uw, 'a_vw': a_vw}
+        try:
+            os.makedirs(res_path, mode = 0o777, exist_ok = True)
+            print("Directory '%s' created successfully" %res_path)
+        except:
+            print("Directory '%s' can not be created"%res_path)
+
+        save_var= {'a_uu': atensor['uu'], 'a_vv': atensor['vv'], 'a_ww': atensor['ww'], \
+                'a_uv': atensor['uv'], 'a_uw': atensor['uw'], 'a_vw': atensor['vw']}
 
         filename = os.path.join(res_path, file_prefix + '_anisotropy_tensor.plt')
-        tecreader.save_plt(save_var, dataset, filename, addvars = True, removevars = True)
+        print(filename)
+        tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
         save_var= {'ev1': ev[0,:], 'ev2': ev[1,:], 'ev3': ev[2,:]}
 
         filename = os.path.join(res_path, file_prefix + '_anisotropy_eigenvalues.plt')
-        tecreader.save_plt(save_var, dataset, filename, addvars = True, removevars = True)
+        tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
         save_var= {'C1': C[0,:], 'C2': C[1,:], 'C3': C[2,:]}
 
         filename = os.path.join(res_path, file_prefix + '_anisotropy_components.plt')
-        tecreader.save_plt(save_var, dataset, filename, addvars = True, removevars = True)
+        tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
     def compute_independent_samples(self):
         # Compute the autocorrelation function at each point

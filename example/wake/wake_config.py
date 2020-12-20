@@ -23,6 +23,8 @@ Andreas Waldmann, 2018
 class WakeCaseParams():
     def __init__(self, case_name, plane, type='CRM_LSS'):
 
+        self.case_name = case_name
+        self.plane_name = plane
         # Types of result dataset
         if type == 'CRM_LSS':
             self.x_PMR = 0.90249

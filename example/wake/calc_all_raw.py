@@ -34,19 +34,19 @@ import matplotlib.pyplot as plt
 import scipy.signal
 import TAUpost.wake.helpers.wake_stats as ws
 from wake_config import WakeCaseParams
-from TAUpost.wake.helpers.data_class import FieldSeries, ResultField
+from TAUpost.wake.helpers.data_class import FieldSeries, WakeField
 
 
 def get_rawdata(case_name, plane_name, case_type):
 
-    par = WakeCaseParams(case_name, plane_name, case_type)
-    print(par)
+    param = WakeCaseParams(case_name, plane_name, case_type)
+    print(param)
     # Get parameter dict from config file based on above input
-    par.end_i = 5500
+    param.end_i = 5500
 
     # Get the data time series. The uvw data are arrays of shape (n_points, n_samples). dataset is a Tecplot dataset.
-    in_data,dataset = tecreader.get_series(par.plt_path, par.zonelist, par.start_i, par.end_i, \
-        read_velocities=True,read_cp=False, read_vel_gradients=False, stride = par.di, \
+    in_data,dataset = tecreader.get_series(param.plt_path, param.zonelist, param.start_i, param.end_i, \
+        read_velocities=True,read_cp=False, read_vel_gradients=False, stride = param.di, \
         parallel=False, verbose=True)
 
     # Create a FieldSeries object to hold the velocity vectors
@@ -56,10 +56,17 @@ def get_rawdata(case_name, plane_name, case_type):
     print('done reading. shape of u: ' + str(in_data['u'].shape))
     # Get the coordinates as arrays and add them to the velocity data
     x,y,z = tecreader.get_coordinates(dataset, caps=True)
+
     vel.set_coords(x,y,z)
+    wake = WakeField()
+    wake.vel = vel
+    wake.dataset = dataset
+    wake.param = param
+    wake.set_coords(x,y,z)
+
 
     # Return the FieldSeries object and the Tecplot dataset
-    return vel, dataset
+    return wake
 
 
 ######################################################################
@@ -68,31 +75,35 @@ if __name__ == "__main__":
     plane_name = 'eta0603'
     case_type = 'CRM_LSS'
     case_name = 'CRM_v38h_DDES_dt100_ldDLR_CFL2_eigval015_pswitch1_tau2017_2'
-    par = WakeCaseParams(case_name, plane_name, case_type)
+    #par = WakeCaseParams(case_name, plane_name, case_type)
 
-    vel,dataset = get_rawdata(case_name, plane_name, case_type)
-
+    wake = get_rawdata(case_name, plane_name, case_type)
+    par = wake.param
     # Get the coordinates as arrays
     #x,y,z = tecreader.get_coordinates(dataset, caps=True)
-
+    vel = wake.vel
 
     # Carry out rotation to the inflow direction
     print('point of model rotation:')
-    print('x_PMR: ' +str(par.x_PMR))
-    print('z_PMR: ' +str(par.z_PMR))
+    print('x_PMR: ' +str(wake.param.x_PMR))
+    print('z_PMR: ' +str(wake.param.z_PMR))
 
-    ws.rotate_dataset(dataset, par.x_PMR, par.z_PMR, par.aoa)
-    x_WT, z_WT = ws.transform_wake_coords(vel.x,vel.z, par.x_PMR, par.z_PMR, par.aoa)
-    u_WT, w_WT = ws.rotate_velocities(vel.u, vel.v, vel.w, par.x_PMR, par.z_PMR, par.aoa)
-    vel.u = u_WT
-    vel.w = w_WT
-    res = ResultField()
-    res.vel = vel
-    vel.set_coords(x_WT, None, z_WT)
-    res.set_coords(x_WT, None, z_WT)
-    vel.cs = 'WT'
-    res.compute_anisotropy()
-    res.save_anisotropy()
+    wake.rotate_CS(18, 'WT')
+
+
+
+
+
+    #wake.set_coords(x_WT, None, z_WT)
+    #wake.set_coords(x_WT, None, z_WT)
+    #vel.cs = 'WT'
+
+
+    wake.compute_rstresses(do_save = True)
+    wake.compute_anisotropy(do_save=True)
+
+
+    #res.save_anisotropy()
     sys.exit(0)
     #anisotropy.compute(u_WT,v,w_WT)
 

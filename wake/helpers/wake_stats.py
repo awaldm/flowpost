@@ -13,7 +13,7 @@ import os, sys
 import pandas as pd
 #import tecplot as tp
 #import pyTecIO_AW.tecreader as tecreader
-import signal_fun.autocorr as ac
+import TAUpost.signal_fun.autocorr as ac
 
 ############################################################################
 
