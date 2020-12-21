@@ -98,97 +98,11 @@ if __name__ == "__main__":
     #wake.set_coords(x_WT, None, z_WT)
     #vel.cs = 'WT'
 
+    wake.vel.n_samples = wake.vel.u.shape[-1]
 
-    wake.compute_rstresses(do_save = True)
-    wake.compute_anisotropy(do_save=True)
-
+    #wake.compute_rstresses(do_save = True)
+    #wake.compute_anisotropy(do_save = True)
+    wake.compute_independent_samples(do_save = True)
 
     #res.save_anisotropy()
-    sys.exit(0)
-    #anisotropy.compute(u_WT,v,w_WT)
-
-    file_prefix = case_name+'_'+par.plane
-    anisotropy.save(par.res_path, file_prefix)
-
-    sys.exit(0)
-    n_samples = u.shape[-1]
-
-
-
-    '''
-    uu = np.var(u, axis=-1)
-    ww = np.var(w, axis=-1)
-    uw = np.zeros(mean_u.shape)
-    #aaa = (u-np.mean(u, keepdims=True))
-    for i in range(len(mean_u)):
-        uflu = u[i,:] - np.mean(u[i,:], keepdims = True)
-        wflu = w[i,:] - np.mean(w[i,:], keepdims = True)
-        uw[i] = np.mean(np.multiply(uflu, wflu))
-    print('uw shape: ' + str(uw.shape))
-    '''
-
-
-    # Get the coordinates as arrays
-    x,y,z = tecreader.get_coordinates(dataset, caps=True)
-
-
-    # Carry out rotation to the inflow direction
-    aoa = par.aoa
-    x_PMR = par.x_PMR
-    z_PMR = par.z_PMR
-    print('x_PMR: ' +str(x_PMR))
-    print('z_PMR: ' +str(z_PMR))
-
-    ws.rotate_dataset(dataset, x_PMR, z_PMR, aoa)
-    x_WT, z_WT = ws.transform_wake_coords(x,z, x_PMR, z_PMR, par.aoa)
-    u_WT, w_WT = ws.rotate_velocities(u,v,w, x_PMR, z_PMR, par.aoa)
-
-    # We need reynolds stresses for anisotropy calculation
-    uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u_WT,v,w_WT)
-    mean_u = np.mean(u_WT, axis=-1)
-    mean_v = np.mean(v, axis=-1)
-    mean_w = np.mean(w_WT, axis=-1)
-
-    kt = 0.5* (uu + vv + ww)
-
-    # Compute the anisotropy tensor
-    a_uu, a_vv, a_ww, a_uv, a_uw, a_vw = ws.compute_atensor(uu, vv, ww, uv, uw, vw, kt)
-    # Compute second and third invariants of the anisotropy tensor
-    invar2, invar3, ev = ws.compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
-    # Compute barycentric coordinates
-    C, xb, yb = ws.compute_anisotropy_barycentric(ev)
-
-
-    print('shape of C: ' + str(C.shape))
-
-
-
-    # Save the results
-
-    newvar=dict()
-    newvar['a_uu'] = a_uu
-    newvar['a_vv'] = a_vv
-    newvar['a_ww'] = a_ww
-    newvar['a_uv'] = a_uv
-    newvar['a_uw'] = a_uw
-    newvar['a_vw'] = a_vw
-    varnames = newvar.keys()
-    filename = par.res_path + case_name+'_'+par.plane+'_anisotropy_tensor.plt'
-    save_plt(newvar, dataset, filename, addvars = True, removevars = True)
-
-    newvar=dict()
-    newvar['ev1'] = ev[0,:]
-    newvar['ev2'] = ev[1,:]
-    newvar['ev3'] = ev[2,:]
-    varnames = newvar.keys()
-    filename = par.res_path + case_name+'_'+par.plane+'_anisotropy_eigvals.plt'
-    save_plt(newvar, dataset, filename, addvars = True, removevars = True)
-
-
-    newvar = dict()
-    newvar['C1'] = C[0,:]
-    newvar['C2'] = C[1,:]
-    newvar['C3'] = C[2,:]
-    varnames = newvar.keys()
-    filename = par.res_path + case_name+'_'+par.plane+'_anisotropy_components.plt'
-    save_plt(newvar, dataset, filename, addvars = True, removevars = True)
+    

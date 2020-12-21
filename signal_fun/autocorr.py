@@ -1,8 +1,7 @@
 import numpy as np
 def autocorr(x):
     result = np.correlate(x, x, mode='full')
-    print(result)
-    print(result[result.size//2:])
+    
     return result[result.size//2:] / (np.var(x)  * len(x))
 
 # the following three are from
@@ -13,7 +12,7 @@ fft = np.fft
 def autocorrelation(x):
     """
     Compute autocorrelation using FFT
-    The idea comes from 
+    The idea comes from
     http://dsp.stackexchange.com/a/1923/4363 (Hilmar)
     """
     x = np.asarray(x)
@@ -31,7 +30,7 @@ def AutoCorrelation(x):
     result = np.correlate(y, y, mode='full')
     result = result[len(result)//2:]
     result /= result[0]
-    return result 
+    return result
 
 def autocorrelate(x):
     fftx = fft.fft(x)
@@ -91,5 +90,3 @@ def t_int(ACF):
         t += increment
 
     return ts_int
-
-

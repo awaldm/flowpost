@@ -144,8 +144,6 @@ class WakeField():
         self.vel.u = u_WT
         self.vel.w = w_WT
         self.cs = CSname
-
-
         self.set_coords(x_WT, self.y, z_WT)
 
     def compute_rstresses(self, do_save = False):
@@ -162,6 +160,9 @@ class WakeField():
         #self.rstresses.uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u_WT,v,w_WT)
         if do_save:
             self.save_rstresses(self.rstresses, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
+
+
+
 
     def save_rstresses(self, rstress, res_path = None, file_prefix = None):
         if res_path is None:
@@ -266,17 +267,26 @@ class WakeField():
         filename = os.path.join(res_path, file_prefix + '_anisotropy_components.plt')
         tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
-    def compute_independent_samples(self):
+    def compute_independent_samples(self, acf_maxlag = 300, do_save = False):
         # Compute the autocorrelation function at each point
-        uprime, vprime, wprime = ws.compute_fluctuations()
-        acf_u = wt.compute_field_acf(uprime, 300)
-        acf_w = wt.compute_field_acf(wprime, 300)
+        uprime, _, wprime = ws.compute_fluctuations(self.vel.u, self.vel.v, self.vel.w)
+        self.acf_u = ws.compute_field_acf(uprime, acf_maxlag)
+        self.acf_w = ws.compute_field_acf(wprime, acf_maxlag)
 
         # Obtain the number of independent samples based on the ACF
-        ind_u = wt.compute_field_acf_index(acf_u)
-        ind_w = wt.compute_field_acf_index(acf_w)
+        ind_u = ws.compute_field_acf_index(self.acf_u)
+        ind_w = ws.compute_field_acf_index(self.acf_w)
+        self.n_eff_u = self.vel.n_samples/(2*ind_u)
+        self.n_eff_w = self.vel.n_samples/(2*ind_w)
+
+        if do_save:
+            res_path = self.param.res_path
+            file_prefix = self.param.case_name+'_' + self.param.plane_name
+            save_var= {'n_eff_u': self.n_eff_u, 'n_eff_w': self.n_eff_w}
 
 
+            filename = os.path.join(res_path, file_prefix + '_ind_samples.plt')
+            tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
 class VelocityField(DataField):
     def __init__(self, x=None,z=None,v=None,u=None,w=None):
