@@ -78,6 +78,7 @@ if __name__ == "__main__":
     #par = WakeCaseParams(case_name, plane_name, case_type)
 
     wake = get_rawdata(case_name, plane_name, case_type)
+
     par = wake.param
     # Get the coordinates as arrays
     #x,y,z = tecreader.get_coordinates(dataset, caps=True)
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     print('x_PMR: ' +str(wake.param.x_PMR))
     print('z_PMR: ' +str(wake.param.z_PMR))
 
-    wake.rotate_CS(18, 'WT')
+    wake.rotate_CS('WT')
 
 
 
@@ -98,11 +99,14 @@ if __name__ == "__main__":
     #wake.set_coords(x_WT, None, z_WT)
     #vel.cs = 'WT'
 
+
     wake.vel.n_samples = wake.vel.u.shape[-1]
 
     #wake.compute_rstresses(do_save = True)
     #wake.compute_anisotropy(do_save = True)
-    wake.compute_independent_samples(do_save = True)
+    #wake.compute_independent_samples(do_save = True)
+    wake.compute_PSD([], do_save = True)
+    #wake.compute_skew_kurt(do_save = True)
+
 
     #res.save_anisotropy()
-    

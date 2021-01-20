@@ -137,7 +137,9 @@ class WakeField():
         self.y = y
         self.z = z
 
-    def rotate_CS(self, alpha, CSname):
+
+    def rotate_CS(self, CSname):
+        print('rotating by ' + str(self.param.aoa))
         ws.rotate_dataset(self.dataset, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
         x_WT, z_WT = ws.transform_wake_coords(self.vel.x,self.vel.z, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
         u_WT, w_WT = ws.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
@@ -161,6 +163,77 @@ class WakeField():
         if do_save:
             self.save_rstresses(self.rstresses, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
 
+    def field_PSD(self, data, dt = 1, n_bins = 2, n_overlap = 0.5, window = 'hann'):
+        import scipy
+        n_points = data.shape[0]
+        n_samples = data.shape[1]
+
+
+        nperseg = np.round(n_samples / (1 + n_overlap*(n_bins - 1))) # this takes into account the overlap
+
+        print('computing Welch PSD for all points...')
+        print('temporal samples: ' + str(n_samples))
+        print('points per segment: ' + str(nperseg))
+
+        for point in range(n_points):
+            f, PSD = scipy.signal.welch(data[point, :], fs = 1 / dt,
+                                            window = window,
+                                            nperseg = nperseg,
+                                            scaling = 'density')
+            if point == 0:
+                f_mat = np.zeros([n_points, len(f)])
+                PSD_mat = np.zeros([n_points, len(f)])
+            f_mat[point, :] = f
+            PSD_mat[point, :] = PSD
+
+        return f_mat, PSD_mat
+
+    def compute_PSD(self, data, dt = None, n_bins = 2, n_overlap = 0.5, do_save = False):
+        if dt is None:
+            dt = self.param.dt
+        '''
+        if isinstance(data, list):
+            print('is a list')
+            print(self.vel.u.shape)
+            in_data = []
+            for entry in data:
+                in_data.append(getattr(self.vel, entry))
+        '''
+        # Compute the PSDs for each variable one by one and save them to disk
+        # immediately, as the results have a significant memory footprint
+        for var, name in zip([self.vel.u, self.vel.v, self.vel.w], ['u', 'v', 'w']):
+            f, PSD = self.field_PSD(var, dt = dt, n_bins=n_bins, n_overlap = n_overlap)
+            if do_save:
+                file_prefix = self.param.case_name+'_' + self.param.plane_name
+                filename = os.path.join(self.param.res_path, file_prefix + '_' + str(name) +'_PSD')
+                np.savez(filename, x=self.x, y=self.y, z=self.z, f=f[0,:], PSD=PSD)
+
+
+
+    def compute_skew_kurt(self, do_save = False):
+
+        from scipy.stats import kurtosis, skew
+
+        self.skew = {}
+        self.kurt = {}
+        for var, name in zip([self.vel.u, self.vel.v, self.vel.w], ['u', 'v', 'w']):
+            self.skew[name] = skew(var, axis=-1)
+            self.kurt[name] = kurtosis(var, axis=-1)
+
+
+        res_path = self.param.res_path
+        file_prefix = self.param.case_name+'_' + self.param.plane_name
+
+        save_var= {'skew_u': self.skew['u'], 'skew_v': self.skew['v'], 'skew_w': self.skew['w']}
+
+        filename = os.path.join(res_path, file_prefix + '_skewness.plt')
+        tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
+
+
+        save_var= {'kurt_u': self.kurt['u'], 'kurt_v': self.kurt['v'], 'kurt_w': self.kurt['w']}
+
+        filename = os.path.join(res_path, file_prefix + '_kurtosis.plt')
+        tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
 
 
@@ -267,7 +340,7 @@ class WakeField():
         filename = os.path.join(res_path, file_prefix + '_anisotropy_components.plt')
         tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
-    def compute_independent_samples(self, acf_maxlag = 300, do_save = False):
+    def compute_independent_samples(self, acf_maxlag = 10, do_save = False):
         # Compute the autocorrelation function at each point
         uprime, _, wprime = ws.compute_fluctuations(self.vel.u, self.vel.v, self.vel.w)
         self.acf_u = ws.compute_field_acf(uprime, acf_maxlag)
