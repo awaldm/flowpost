@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-import TAUpost.wake.helpers.wake_stats as ws
+import flowpost.wake.helpers.wake_stats as ws
 from wake_config import WakeCaseParams
-import TAUpost.pyTecIO.tecreader as tecreader
+import flowpost.IO.pyTecIO.tecreader as tecreader
 import os
 import numpy as np
+from ...calc.stats import VelocityStatistics, ReynoldsStresses
 ###############################################################################
 # Some data classes, never used
 class DataField():
@@ -101,21 +102,6 @@ class ReynoldsStress():
 
 
 
-@dataclass
-class AnisotropyData():
-    uu: np.ndarray = None
-    vv: np.ndarray = None
-    ww: np.ndarray = None
-    uv: np.ndarray = None
-    uw: np.ndarray = None
-    vw: np.ndarray = None
-    def set_values(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw):
-        self.uu = a_uu
-        self.vv = a_vv
-        self.ww = a_ww
-        self.uv = a_uv
-        self.uw = a_uw
-        self.vw = a_vw
 
 
 
@@ -124,8 +110,7 @@ class WakeField():
     vel: FieldSeries = None
     vel_prime: FieldSeries = None
     dataset = None # Tecplot dataset
-    rstresses: dict = None
-    atensor: dict = None
+    stats = VelocityStatistics()
     cs: str = 'AC'
     coords: Coordinates = None
     param: WakeCaseParams = None
@@ -152,8 +137,8 @@ class WakeField():
         #uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u,v,w)
         #self.rstresses = ReynoldsStress
         #self.rstresses.set_values()
-        self.rstresses = ws.calc_rstresses(self.vel.u, self.vel.v, self.vel.w, return_dict=True)
-        self.rstresses['kt'] = 0.5* (self.rstresses['uu'] + self.rstresses['vv'] + self.rstresses['ww'])
+        self.stats.rstresses = ws.calc_rstresses(self.vel.u, self.vel.v, self.vel.w, return_dict=True)
+        self.stats.rstresses['kt'] = 0.5* (self.rstresses['uu'] + self.rstresses['vv'] + self.rstresses['ww'])
 
         #print('d: ' + str(d))
         #self.rstresses.set_unnamed(d)
@@ -261,38 +246,14 @@ class WakeField():
     def compute_fluctuations(self):
         self.vel.uprime, self.vel.vprime, self.vel.wprime = ws.compute_fluctuations(self.vel.u, self.vel.v, self.vel.w)
 
-
+    def compute_anisotropy(self, do_save = False):
+        self.stats.compute_anisotropy(do_save = do_save, vel = self.vel)
 
     def compute_means(self):
 
         mean_u = np.mean(u, axis=-1)
         mean_v = np.mean(v, axis=-1)
         mean_w = np.mean(w, axis=-1)
-
-    def compute_anisotropy(self, do_save = False):
-        self.atensor = AnisotropyData
-        if self.rstresses is None:
-
-            self.compute_rstresses()
-            self.rstresses['kt'] = 0.5* (self.rstresses['uu'] + self.rstresses['vv'] + self.rstresses['ww'])
-        print('coords :' +str(self.coords))
-        # Compute the anisotropy tensor
-        a_uu, a_vv, a_ww, a_uv, a_uw, a_vw = ws.compute_atensor(self.rstresses['uu'], \
-        self.rstresses['vv'], \
-        self.rstresses['ww'], \
-        self.rstresses['uv'], \
-        self.rstresses['uw'], \
-        self.rstresses['vw'], \
-        self.rstresses['kt'])
-        # Compute second and third invariants of the anisotropy tensor
-        self.atensor = {'uu': a_uu, 'vv': a_vv, 'ww': a_ww, 'uv': a_uv, 'uw': a_uw, 'vw': a_vw}
-
-        invar2, invar3, ev = ws.compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
-        # Compute barycentric coordinates
-        C, xb, yb = ws.compute_anisotropy_barycentric(ev)
-
-        if do_save:
-            self.save_anisotropy(self.atensor, ev, C, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
 
     def save_plt():
         pass

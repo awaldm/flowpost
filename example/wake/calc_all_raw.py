@@ -29,12 +29,12 @@ import shutil
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib as mpl
-import TAUpost.pyTecIO.tecreader as tecreader
+import flowpost.IO.pyTecIO.tecreader as tecreader
 import matplotlib.pyplot as plt
 import scipy.signal
-import TAUpost.wake.helpers.wake_stats as ws
+import flowpost.wake.helpers.wake_stats as ws
 from wake_config import WakeCaseParams
-from TAUpost.wake.helpers.data_class import FieldSeries, WakeField
+from flowpost.wake.helpers.data_class import FieldSeries, WakeField
 
 
 def get_rawdata(case_name, plane_name, case_type):
@@ -43,7 +43,7 @@ def get_rawdata(case_name, plane_name, case_type):
     print(param)
     # Get parameter dict from config file based on above input
     param.end_i = 5500
-
+    param.plt_path = '/home/andreas/data/CRM_example_data/low_speed/' 
     # Get the data time series. The uvw data are arrays of shape (n_points, n_samples). dataset is a Tecplot dataset.
     in_data,dataset = tecreader.get_series(param.plt_path, param.zonelist, param.start_i, param.end_i, \
         read_velocities=True,read_cp=False, read_vel_gradients=False, stride = param.di, \
@@ -101,11 +101,11 @@ if __name__ == "__main__":
 
 
     wake.vel.n_samples = wake.vel.u.shape[-1]
-
+    print(wake.stats.__dict__)
     #wake.compute_rstresses(do_save = True)
-    #wake.compute_anisotropy(do_save = True)
+    wake.compute_anisotropy(do_save = True)
     #wake.compute_independent_samples(do_save = True)
-    wake.compute_PSD([], do_save = True)
+    #wake.compute_PSD([], do_save = True)
     #wake.compute_skew_kurt(do_save = True)
 
 

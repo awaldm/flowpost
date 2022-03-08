@@ -13,7 +13,7 @@ import os, sys
 import pandas as pd
 #import tecplot as tp
 #import pyTecIO_AW.tecreader as tecreader
-import TAUpost.signal_fun.autocorr as ac
+from ...signal_fun import autocorr as ac
 
 ############################################################################
 
@@ -353,76 +353,7 @@ def compute_rstresses(u,v,w):
 
     return uu, vv, ww, uv, uw, vw, kt
 
-def compute_atensor(uu, vv, ww, uv, uw, vw, kt, return_tensor = False):
-    '''
-    anisotropy tensor from reynolds stress tensor components
-    '''
-    a_uu = np.divide(uu, (2.*kt)) - (1/3)
-    a_vv = np.divide(vv, (2.*kt)) - (1/3)
-    a_ww = np.divide(ww, (2.*kt)) - (1/3)
-    a_uv = np.divide(uv, (2.*kt))
-    a_vw = np.divide(vw, (2.*kt))
-    a_uw = np.divide(uw, (2.*kt))
-    if return_tensor:
-        return atensor_components_to_array(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
-    else:
-        return a_uu, a_vv, a_ww, a_uv, a_uw, a_vw
 
-def atensor_components_to_array(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw):
-    '''
-    build a matrix from the anisotropy tensor elements
-    the spatial points a in the first axis (dim 0)
-
-    squeeze is necessary to drop the last dimension of length 1
-    transposition of points to dim 0 is necessary to parallelize eigenvalue computation
-    rationale: np.linalg.eig computes eigenvalues
-    '''
-    atensor = np.array([[a_uu, a_uv, a_uw],[a_uv, a_vv, a_vw], [a_uw, a_vw, a_ww]])
-    atensor = np.squeeze(atensor)
-    return np.transpose(atensor, [2,0,1])
-
-def compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw):
-    print('shape of anisotropy component: ' + str(a_uu.shape))
-    num_points = a_uu.shape[0]
-    #ev = np.zeros([3,num_points])
-
-    atensor = atensor_components_to_array(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
-    print('shape of atensor: ' + str(atensor.shape))
-
-    ev, _ = np.linalg.eig(atensor)
-    ev = np.transpose(ev, [1,0])
-    for i in range(ev.shape[1]):
-        #ev[::-1].sort()
-        ev[:,i].sort()
-        ev[:,i] = np.flip(ev[:,i])
-        #if i == 0:
-            #print(ev[:,i])
-
-    print('shape of ev: ' + str(ev.shape))
-    #for i in range(num_points):
-    #    atensor = atensor_components_to_array(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
-    #    print atensor
-    #    print atensor.shape
-    #    ev[:,i], _ = np.linalg.eig(atensor)
-    invar2 = ev[0,:]**2 + ev[1,:]**2 + np.multiply(ev[0,:],ev[1,:])
-    invar3 = -1 * np.multiply(np.multiply(ev[0,:] , ev[1,:]), (ev[0,:] + ev[1,:])) # = det(b)
-
-    invar2 = 2*invar2
-    invar3 = 3*invar3
-    return invar2, invar3, ev
-
-def compute_anisotropy_barycentric(ev):
-    num_points = ev.shape[1]
-    C = np.zeros([3, num_points])
-    xb = np.zeros([1,num_points])
-    yb = np.zeros([1,num_points])
-    C[0,:] = ev[0,:] - ev[1,:]
-    C[1,:] = 2*(ev[1,:] - ev[2,:])
-    C[2,:] = 3*(ev[2,:]) + 1
-
-    xb = C[0,:] + 0.5*C[2,:]
-    yb = (np.sqrt(3.0)/2.0) * C[2,:]
-    return C, xb, yb
 
 import math
 

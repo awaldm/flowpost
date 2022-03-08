@@ -1,1 +1,1 @@
-from TAUpost._version import __version__
+from flowpost._version import __version__
