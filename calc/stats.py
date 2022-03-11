@@ -8,15 +8,15 @@ class Statistics():
         self.variance = {}
         self.skew = {}
         self.kurt = {}
-   
+
     def means(self, x, name_x):
         x_mean = np.mean(x, axis=-1,keepdims=True)
-        self.mean[name_x] = x_mean   
- 
+        self.mean[name_x] = x_mean
+
     def variances(self, x, name_x):
         x_variance = np.var(x, axis=-1,keepdims=True)
         self.variance[name_x] = x_variance
- 
+
     def skews(self, x, name_x):
         from scipy.stats import skew
         x_skew = skew(x, axis=-1)
@@ -26,17 +26,20 @@ class Statistics():
         from scipy.stats import kurtosis
         x_kurt = kurtosis(x, axis=-1)
         self.kurt[name_x] = x_kurt
-    
+
 
 class VelocityStatistics(Statistics):
     '''
-    
+
     '''
     def __init__(self):
         # initialize defaults
         Statistics.__init__(self)
         self.rs: ReynoldsStresses = ReynoldsStresses()
         self.an: AnisotropyTensor = AnisotropyTensor()
+
+    def compute_rstresses(self, vel, do_save = False, return_dict=False):
+        self.rs.calc_rstresses(vel.u, vel.v, vel.w)
 
     def compute_anisotropy(self, vel = None, do_save = False):
         #self.stats.atensor = AnisotropyData
@@ -56,13 +59,13 @@ class VelocityStatistics(Statistics):
         # Compute second and third invariants of the anisotropy tensor
         atensor = {'uu': a_uu, 'vv': a_vv, 'ww': a_ww, 'uv': a_uv, 'uw': a_uw, 'vw': a_vw}
 
-        invar2, invar3, ev = self.an.compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
+        self.an.invar2, self.an.invar3, self.an.ev = self.an.compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
         # Compute barycentric coordinates
-        C, xb, yb = self.an.compute_anisotropy_barycentric(ev)
+        self.an.C, self.an.xb, self.an.yb = self.an.compute_anisotropy_barycentric(self.an.ev)
 
-        if do_save:
-            self.save_anisotropy(self.stats.atensor, ev, C, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
-        
+        #if do_save:
+        #    self.save_anisotropy(self.stats.atensor, ev, C, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
+
 @dataclass
 class AnisotropyTensor():
     uu: np.ndarray = None
@@ -155,9 +158,7 @@ class AnisotropyTensor():
 
 class ReynoldsStresses():
     '''
-    Maybe call this VectorStatistics in order to be less specific
-    
-    TODO: should this inherit from Statistics or be standalone?
+
     '''
 
     def __init__(self):
@@ -177,16 +178,28 @@ class ReynoldsStresses():
         '''
         handle the case where rstresses are already computed and no recomputation is necessary
         '''
-        
+
         self.calc_rstresses(u, v, w)
-    
+
+    def as_dict(self):
+        rs = {}
+        rs['uu'] = self.uu
+        rs['vv'] = self.vv
+        rs['ww'] = self.ww
+        rs['uv'] = self.uv
+        rs['uw'] = self.uw
+        rs['vw'] = self.vw
+        rs['kt'] = 0.5* (self.uu + self.vv + self.ww)
+        return rs
+
+
     def calc_rstresses(self, u,v,w, return_dict=False):
         # Some shaping code, just in case the arrays had not been flattened before
         reshaped = False
-        
+
         shape = u.shape
         newshape = shape[0:-1]
-        
+
         if len(shape) > 2:
             u.reshape(shape[0]*shape[1],shape[2])
             v.reshape(shape[0]*shape[1],shape[2])
@@ -203,7 +216,7 @@ class ReynoldsStresses():
         self.uw = np.zeros(self.uu.shape)
         self.uv = np.zeros(self.uu.shape)
         self.vw = np.zeros(self.uu.shape)
-        
+
         for i in range(self.uu.shape[0]):
             uflu = u[i,:] - np.mean(u[i,:], keepdims = True)
             vflu = v[i,:] - np.mean(v[i,:], keepdims = True)

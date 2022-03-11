@@ -35,7 +35,7 @@ import scipy.signal
 import flowpost.wake.helpers.wake_stats as ws
 from wake_config import WakeCaseParams
 from flowpost.wake.helpers.data_class import FieldSeries, WakeField
-
+import extract_centerline as ex
 
 def get_rawdata(case_name, plane_name, case_type):
 
@@ -43,7 +43,7 @@ def get_rawdata(case_name, plane_name, case_type):
     print(param)
     # Get parameter dict from config file based on above input
     param.end_i = 5500
-    param.plt_path = '/home/andreas/data/CRM_example_data/low_speed/' 
+    param.plt_path = '/home/andreas/data/CRM_example_data/low_speed/'
     # Get the data time series. The uvw data are arrays of shape (n_points, n_samples). dataset is a Tecplot dataset.
     in_data,dataset = tecreader.get_series(param.plt_path, param.zonelist, param.start_i, param.end_i, \
         read_velocities=True,read_cp=False, read_vel_gradients=False, stride = param.di, \
@@ -71,6 +71,10 @@ def get_rawdata(case_name, plane_name, case_type):
 
 ######################################################################
 if __name__ == "__main__":
+     # We sometimes need to create and destroy a figure BEFORE loading any Tecplot data
+    fig, ax = plt.subplots(1,1)
+    plt.close()
+
     out_folder = './results/'
     plane_name = 'eta0603'
     case_type = 'CRM_LSS'
@@ -99,11 +103,38 @@ if __name__ == "__main__":
     #wake.set_coords(x_WT, None, z_WT)
     #vel.cs = 'WT'
 
-
+    print(wake.x)
     wake.vel.n_samples = wake.vel.u.shape[-1]
     print(wake.stats.__dict__)
+
+    # compute velocty means
+    wake.compute_means()
+    wake.save_means()
+
+    # interpolate mean velocity onto a regular grid
+    xi, zi, ui = ex.interpolate_struct_data(wake.x, wake.z, wake.stats.mean['u'])
+
+    # get wake minimum position
+    wake_min_pos = ex.wake_min_pos(xi,zi,ui)
+    print(xi)
+    plt.plot(xi, wake_min_pos)
+
+    # fit a rough linear approximation of the wake centerline
+    _, fit_line = ex.fit_line(xi, wake_min_pos)
+
+    #plt.plot(xi, fit_line)
+    #plt.show()
+    #plt.close()
     #wake.compute_rstresses(do_save = True)
+    #wake.save_rstresses(wake.stats.rs.as_dict())
+
+    # get the anisotropy data including the barycentric coordinates
     wake.compute_anisotropy(do_save = True)
+
+    from plot_anisotropy import draw_barycentric
+    # draw anisotropy along centerline in barycentric coordinates
+    draw_barycentric(wake.stats.an.C, wake.stats.an.xb, wake.stats.an.yb, wake.x, wake.z, xi, wake_min_pos)
+
     #wake.compute_independent_samples(do_save = True)
     #wake.compute_PSD([], do_save = True)
     #wake.compute_skew_kurt(do_save = True)

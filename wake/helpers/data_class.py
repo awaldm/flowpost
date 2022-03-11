@@ -73,6 +73,7 @@ class FieldSeries():
         #self.u = self.u[:,skip:]
         #self.v = self.v[:,skip:]
 
+'''
 @dataclass
 class ReynoldsStress():
     uu: np.ndarray = None
@@ -101,7 +102,7 @@ class ReynoldsStress():
             setattr(self, key, kwargs[key])
 
 
-
+'''
 
 
 
@@ -134,6 +135,8 @@ class WakeField():
         self.set_coords(x_WT, self.y, z_WT)
 
     def compute_rstresses(self, do_save = False):
+        self.stats.compute_rstresses(do_save = do_save, vel = self.vel)
+        '''
         #uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u,v,w)
         #self.rstresses = ReynoldsStress
         #self.rstresses.set_values()
@@ -147,7 +150,7 @@ class WakeField():
         #self.rstresses.uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u_WT,v,w_WT)
         if do_save:
             self.save_rstresses(self.rstresses, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
-
+        '''
     def field_PSD(self, data, dt = 1, n_bins = 2, n_overlap = 0.5, window = 'hann'):
         import scipy
         n_points = data.shape[0]
@@ -221,6 +224,37 @@ class WakeField():
         tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
 
+    def write_stats(self, stat_name, file_prefix = 'test_data'):
+        '''
+        Write stats. Select the specific variable using name.
+
+        Parameters
+        ----------
+
+        name : str
+            the 1D signal
+
+
+        TODO: this can only work if means have been computed
+        TODO: add a loop to write multiple variables
+        TODO: understand how the logger works!
+        TODO: set proper name for the data variables inside the resulting PLT file
+        '''
+        out_path = self.cfg["case"]["res_path"]
+        try:
+            write_file(self.dataset, getattr(self.stats, stat_name), out_path, file_prefix)
+        except:
+            logger.error('No variable ' + str(stat_name) + ' in stats')
+            print('no variable!')
+
+
+    def save_means(self):
+        res_path = self.param.res_path
+        file_prefix = self.param.case_name+'_' + self.param.plane_name
+
+        filename = os.path.join(res_path, file_prefix + '_means.plt')
+        print(self.stats.mean)
+        tecreader.save_plt(self.stats.mean, self.dataset, filename, addvars = True, removevars = True)
 
     def save_rstresses(self, rstress, res_path = None, file_prefix = None):
         if res_path is None:
@@ -250,11 +284,15 @@ class WakeField():
         self.stats.compute_anisotropy(do_save = do_save, vel = self.vel)
 
     def compute_means(self):
+        self.stats.means(self.vel.u, 'u')
+        self.stats.means(self.vel.v, 'v')
+        self.stats.means(self.vel.w, 'w')
 
+        '''
         mean_u = np.mean(u, axis=-1)
         mean_v = np.mean(v, axis=-1)
         mean_w = np.mean(w, axis=-1)
-
+        '''
     def save_plt():
         pass
 
