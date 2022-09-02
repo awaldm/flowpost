@@ -1,6 +1,5 @@
 from setuptools import setup
 
-setup(name='TAU_processing',
+setup(name='flowpost',
    version='0.1',
-   author='Andreas Waldmann',
-   packages=['wake', 'forces'])
+   author='Andreas Waldmann')
