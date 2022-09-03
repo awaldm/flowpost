@@ -1,7 +1,3 @@
-*.png
-*.npz
-*.lay
-*.plt
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -49,6 +45,7 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
 
 # Translations
 *.mo
@@ -103,3 +100,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# IDE settings
+.vscode/
+.idea/
