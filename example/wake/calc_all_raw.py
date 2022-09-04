@@ -29,12 +29,12 @@ import shutil
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib as mpl
-import flowpost.IO.pyTecIO.tecreader as tecreader
+import tecreader as tecreader
 import matplotlib.pyplot as plt
 import scipy.signal
 import flowpost.wake.helpers.wake_stats as ws
 from wake_config import WakeCaseParams
-from flowpost.wake.helpers.data_class import FieldSeries, WakeField
+from flowpost.wake.helpers.data import FieldSeries, WakeField
 import extract_centerline as ex
 
 def get_rawdata(case_name, plane_name, case_type):
@@ -45,7 +45,7 @@ def get_rawdata(case_name, plane_name, case_type):
     param.end_i = 5500
     param.plt_path = '/home/andreas/data/CRM_example_data/low_speed/'
     # Get the data time series. The uvw data are arrays of shape (n_points, n_samples). dataset is a Tecplot dataset.
-    in_data,dataset = tecreader.get_series(param.plt_path, param.zonelist, param.start_i, param.end_i, \
+    in_data, dataset = tecreader.get_series(param.plt_path, param.zonelist, param.start_i, param.end_i, \
         read_velocities=True,read_cp=False, read_vel_gradients=False, stride = param.di, \
         parallel=False, verbose=True)
 

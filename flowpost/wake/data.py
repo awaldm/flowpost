@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 import flowpost.wake.helpers.wake_stats as ws
 from wake_config import WakeCaseParams
-import flowpost.IO.pyTecIO.tecreader as tecreader
+import tecreader as tecreader
 import os
 import numpy as np
-from ...calc.stats import VelocityStatistics, ReynoldsStresses
+from flowpost.stats import VelocityStatistics, ReynoldsStresses
 ###############################################################################
 # Some data classes, never used
 class DataField():
