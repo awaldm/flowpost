@@ -23,6 +23,9 @@ Andreas Waldmann, 2020
 
 
 import os, sys
+#os.environ["LD_LIBRARY_PATH"]="/usr/local/tecplot/360ex_2021r1/bin/llvm:/usr/local/tecplot/360ex_2021r1/bin/osmesa:/usr/local/tecplot/360ex_2021r1/bin:/usr/local/tecplot/360ex_2021r1/bin/sys-util:/usr/local/tecplot/360ex_2021r1/bin/Qt${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+os.environ["LD_LIBRARY_PATH"]="/usr/local/tecplot/360ex_2021r1/bin/llvm:/usr/local/tecplot/360ex_2021r1/bin/osmesa:/usr/local/tecplot/360ex_2021r1/bin:/usr/local/tecplot/360ex_2021r1/bin/sys-util:/usr/local/tecplot/360ex_2021r1/bin/Qt" + ":" + os.path.expandvars("$LD_LIBRARY_PATH")
+os.environ["TECPLOT_SDK_CONFIG"]="--osmesa"
 
 import time
 import shutil
@@ -32,9 +35,9 @@ import matplotlib as mpl
 import tecreader as tecreader
 import matplotlib.pyplot as plt
 import scipy.signal
-import flowpost.wake.helpers.wake_stats as ws
+import flowpost.wake.wake_stats as ws
 from wake_config import WakeCaseParams
-from flowpost.wake.helpers.data import FieldSeries, WakeField
+from flowpost.wake.data import FieldSeries, WakeField
 import extract_centerline as ex
 
 def get_rawdata(case_name, plane_name, case_type):
@@ -146,7 +149,7 @@ if __name__ == "__main__":
     #res.save_anisotropy()
 
     ## Run POD
-    from flowpost.wake.helpers.modal import POD_utils, modal_utils
+    from flowpost.wake.modal import POD_utils, modal_utils
 
     # Set the number of modes to keep
     num_modes = 10

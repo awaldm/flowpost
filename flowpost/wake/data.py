@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import flowpost.wake.helpers.wake_stats as ws
+import flowpost.wake.wake_stats as ws
 from wake_config import WakeCaseParams
 import tecreader as tecreader
 import os

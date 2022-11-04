@@ -1,6 +1,6 @@
 import tecplot as tp
 import numpy as np
-import flowpost.IO.pyTecIO.tecreader as tecreader
+import tecreader as tecreader
 import flowpost.IO.pyTecIO.tec_modules as tec
 
 import os
