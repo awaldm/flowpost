@@ -33,7 +33,7 @@ class FieldSeries():
     v: np.ndarray
     w: np.ndarray
 
-    '''
+    """
     def __init__(self, time=0, x=None,y=None, z=None,u=None,v=None, w=None, struct_data=False, planar=True):
         #vel = VelocityField(self)
         #DataField.__init__(self)
@@ -49,7 +49,7 @@ class FieldSeries():
         self.mean_u, self.mean_v, self.mean_w = compute_means(u,v,w)
         self.gradients = {}
         self.set_velocities(u,v,w)
-    '''
+    """
     def set_velocities(self ,u, v, w):
         self.u = u
         self.v = v
@@ -75,7 +75,7 @@ class FieldSeries():
         #self.u = self.u[:,skip:]
         #self.v = self.v[:,skip:]
 
-'''
+"""
 @dataclass
 class ReynoldsStress():
     uu: np.ndarray = None
@@ -104,7 +104,7 @@ class ReynoldsStress():
             setattr(self, key, kwargs[key])
 
 
-'''
+"""
 
 
 
@@ -115,7 +115,7 @@ class WakeField():
     dataset = None  # Tecplot dataset
     # We needs statistics for velocities and other vars
     vel_stats = VelocityStatistics()
-    stats: FieldStats = None
+    #stats: FieldStats = None
     cs: str = 'AC'
     coords: Coordinates = None
     param: WakeCaseParams = None
@@ -145,7 +145,7 @@ class WakeField():
 
     def compute_rstresses(self, do_save = False):
         self.stats.compute_rstresses(do_save = do_save, vel = self.vel)
-        '''
+        """
         #uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u,v,w)
         #self.rstresses = ReynoldsStress
         #self.rstresses.set_values()
@@ -159,7 +159,34 @@ class WakeField():
         #self.rstresses.uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u_WT,v,w_WT)
         if do_save:
             self.save_rstresses(self.rstresses, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
-        '''
+        """
+
+
+    def interpolate_struct(self, variables = ['u', 'v', 'w']):
+        """Interpolate to a structured 2D dataset
+
+
+        """
+
+        x0, z0 = xlim[0], -0.05
+        x1, z1 = xlim[1], 0.25
+
+        xi, zi = np.linspace(x0, x1, 100), np.linspace(z0, z1, 250)
+        xmesh, zmesh = np.meshgrid(xi,zi)
+
+        print('shape of xi: ' + str(xi.shape))
+        print('shape of zi: ' + str(zi.shape))
+        print('mesh shape: ' + str(xmesh.shape))
+
+
+        for var in variables:
+            self.struct[var] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), u_WT[case], (xmesh, zmesh), method='cubic')
+
+
+
+    def compute_scales(self):
+        pass
+
     def field_PSD(self, data, dt = 1, n_bins = 2, n_overlap = 0.5, window = 'hann'):
         import scipy
         n_points = data.shape[0]
@@ -188,14 +215,14 @@ class WakeField():
     def compute_PSD(self, data, dt = None, n_bins = 2, n_overlap = 0.5, do_save = False):
         if dt is None:
             dt = self.param.dt
-        '''
+        """
         if isinstance(data, list):
             print('is a list')
             print(self.vel.u.shape)
             in_data = []
             for entry in data:
                 in_data.append(getattr(self.vel, entry))
-        '''
+        """
         # Compute the PSDs for each variable one by one and save them to disk
         # immediately, as the results have a significant memory footprint
         for var, name in zip([self.vel.u, self.vel.v, self.vel.w], ['u', 'v', 'w']):
@@ -234,7 +261,7 @@ class WakeField():
 
 
     def write_stats(self, stat_name, file_prefix = 'test_data'):
-        '''
+        """
         Write stats. Select the specific variable using name.
 
         Parameters
@@ -248,7 +275,7 @@ class WakeField():
         TODO: add a loop to write multiple variables
         TODO: understand how the logger works!
         TODO: set proper name for the data variables inside the resulting PLT file
-        '''
+        """
         out_path = self.cfg["case"]["res_path"]
         try:
             write_file(self.dataset, getattr(self.stats, stat_name), out_path, file_prefix)
@@ -262,8 +289,8 @@ class WakeField():
         file_prefix = self.param.case_name+'_' + self.param.plane_name
 
         filename = os.path.join(res_path, file_prefix + '_means.plt')
-        print(self.stats.mean)
-        tecreader.save_plt(self.stats.mean, self.dataset, filename, addvars = True, removevars = True)
+        #print(self.stats.mean)
+        tecreader.save_plt(self.vel_stats.mean, self.dataset, filename, addvars = True, removevars = True)
 
     def save_rstresses(self, rstress, res_path = None, file_prefix = None):
         if res_path is None:
@@ -284,18 +311,22 @@ class WakeField():
         filename = os.path.join(res_path, file_prefix + '_rstresses.plt')
         tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
 
-
+    def compute_wake_quants(self):
+        """
+        The content of wake_stats_multiplecases.py goes here
+        """
+        pass
 
     def compute_fluctuations(self):
         self.vel.uprime, self.vel.vprime, self.vel.wprime = ws.compute_fluctuations(self.vel.u, self.vel.v, self.vel.w)
 
     def compute_anisotropy(self, do_save = False):
-        self.stats.compute_anisotropy(do_save = do_save, vel = self.vel)
+        self.vel_stats.compute_anisotropy(do_save = do_save, vel = self.vel)
 
     def compute_means(self):
-        self.stats.means(self.vel.u, 'u')
-        self.stats.means(self.vel.v, 'v')
-        self.stats.means(self.vel.w, 'w')
+        self.vel_stats.means(self.vel.u, 'u')
+        self.vel_stats.means(self.vel.v, 'v')
+        self.vel_stats.means(self.vel.w, 'w')
 
         '''
         mean_u = np.mean(u, axis=-1)
