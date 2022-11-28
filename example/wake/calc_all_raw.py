@@ -24,8 +24,8 @@ Andreas Waldmann, 2020
 
 import os, sys
 #os.environ["LD_LIBRARY_PATH"]="/usr/local/tecplot/360ex_2021r1/bin/llvm:/usr/local/tecplot/360ex_2021r1/bin/osmesa:/usr/local/tecplot/360ex_2021r1/bin:/usr/local/tecplot/360ex_2021r1/bin/sys-util:/usr/local/tecplot/360ex_2021r1/bin/Qt${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-os.environ["LD_LIBRARY_PATH"]="/usr/local/tecplot/360ex_2021r1/bin/llvm:/usr/local/tecplot/360ex_2021r1/bin/osmesa:/usr/local/tecplot/360ex_2021r1/bin:/usr/local/tecplot/360ex_2021r1/bin/sys-util:/usr/local/tecplot/360ex_2021r1/bin/Qt" + ":" + os.path.expandvars("$LD_LIBRARY_PATH")
-os.environ["TECPLOT_SDK_CONFIG"]="--osmesa"
+#os.environ["LD_LIBRARY_PATH"]="/usr/local/tecplot/360ex_2021r1/bin/llvm:/usr/local/tecplot/360ex_2021r1/bin/osmesa:/usr/local/tecplot/360ex_2021r1/bin:/usr/local/tecplot/360ex_2021r1/bin/sys-util:/usr/local/tecplot/360ex_2021r1/bin/Qt" + ":" + os.path.expandvars("$LD_LIBRARY_PATH")
+#os.environ["TECPLOT_SDK_CONFIG"]="--osmesa"
 
 import time
 import shutil
@@ -39,6 +39,7 @@ import flowpost.wake.wake_stats as ws
 from wake_config import WakeCaseParams
 from flowpost.wake.data import FieldSeries, WakeField
 import extract_centerline as ex
+
 
 def get_rawdata(case_name, plane_name, case_type):
 
@@ -72,12 +73,9 @@ def get_rawdata(case_name, plane_name, case_type):
     return wake
 
 
-
-
-
 ######################################################################
 if __name__ == "__main__":
-     # We sometimes need to create and destroy a figure BEFORE loading any Tecplot data
+    # We sometimes need to create and destroy a figure BEFORE loading any Tecplot data
     fig, ax = plt.subplots(1,1)
     plt.close()
 
@@ -163,7 +161,7 @@ if __name__ == "__main__":
     vflu = wake.vel.v - wake.stats.mean['v']
     wflu = wake.vel.w - wake.stats.mean['w']
 
-    indata = np.vstack((uflu,vflu,wflu))
+    indata = np.vstack((uflu, vflu, wflu))
 
     # Run POD via own hand-coded numpy implementation
     modes, eigvals, eigvecs, coeffs = POD_utils.compute_POD(indata, num_modes)

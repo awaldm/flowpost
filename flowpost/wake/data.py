@@ -5,6 +5,8 @@ import tecreader as tecreader
 import os
 import numpy as np
 from flowpost.stats import VelocityStatistics, ReynoldsStresses
+import flowpost.wake.wake_transform as wt
+
 ###############################################################################
 # Some data classes, never used
 class DataField():
@@ -20,7 +22,7 @@ class Coordinates:
 
 @dataclass(init=False)
 class FieldSeries():
-    """NetCDF file
+    """A class containing velocity time series data
 
     Loads the input file with the NetCFD (.nc) format and
     initialize the variables.
@@ -48,7 +50,7 @@ class FieldSeries():
         self.gradients = {}
         self.set_velocities(u,v,w)
     '''
-    def set_velocities(self,u,v,w):
+    def set_velocities(self ,u, v, w):
         self.u = u
         self.v = v
         self.w = w
@@ -59,8 +61,8 @@ class FieldSeries():
         self.z = z
 
     def computeGradients(self):
-        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
-        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+        dudy, dudx = np.gradient(self.vx,-self.dy/1000,self.dx/1000)
+        dvdy, dvdx = np.gradient(self.vy,-self.dy/1000,self.dx/1000)
         self.gradients['dudy']=dudy
         self.gradients['dudx']=dudx
         self.gradients['dvdy']=dvdy
@@ -110,25 +112,32 @@ class ReynoldsStress():
 class WakeField():
     vel: FieldSeries = None
     vel_prime: FieldSeries = None
-    dataset = None # Tecplot dataset
-    stats = VelocityStatistics()
+    dataset = None  # Tecplot dataset
+    # We needs statistics for velocities and other vars
+    vel_stats = VelocityStatistics()
+    stats: FieldStats = None
     cs: str = 'AC'
     coords: Coordinates = None
     param: WakeCaseParams = None
+    datatype: str = 'tecplot'
 
     #def set_coords(self, x, y, z):
     #    self.coords = Coordinates(x=x, y=y, z=z)
-    def set_coords(self,x,y,z):
+    def set_coords(self ,x, y, z):
         self.x = x
         self.y = y
         self.z = z
 
-
     def rotate_CS(self, CSname):
+        """Rotate the coordinate system
+
+        :param CSname: _description_
+        """
         print('rotating by ' + str(self.param.aoa))
-        ws.rotate_dataset(self.dataset, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
-        x_WT, z_WT = ws.transform_wake_coords(self.vel.x,self.vel.z, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
-        u_WT, w_WT = ws.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        # Call the Tecplot dataset rotation function
+        wt.rotate_dataset(self.dataset, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        x_WT, z_WT = wt.transform_wake_coords(self.vel.x, self.vel.z, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        u_WT, w_WT = wt.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
         self.vel.u = u_WT
         self.vel.w = w_WT
         self.cs = CSname
