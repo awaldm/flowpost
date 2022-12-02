@@ -6,6 +6,9 @@ import os
 import numpy as np
 from flowpost.stats import VelocityStatistics, ReynoldsStresses
 import flowpost.wake.wake_transform as wt
+import scipy
+import logging
+logger = logging.getLogger(__name__)
 
 ###############################################################################
 # Some data classes, never used
@@ -20,12 +23,48 @@ class Coordinates:
         self.y = y
         self.z = z
 
+
 @dataclass(init=False)
-class FieldSeries():
+class DataSeries():
+    def set_coords(self,x,y,z):
+        self.x = x
+        self.y = y
+        self.z = z
+        # this does not work
+
+    def get_vars(self, var_list):
+        print(self.__dict__.keys())
+        sys.exit(0)
+
+        for v in var_list:
+            value = getattr(self, v)
+            print(value)
+
+    def get_var(self, varname):
+
+        if varname in self.__dict__.keys():
+            return getattr(self, varname)
+
+    def computeGradients(self):
+        dudy, dudx = np.gradient(self.vx,-self.dy/1000,self.dx/1000)
+        dvdy, dvdx = np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+        self.gradients['dudy']=dudy
+        self.gradients['dudx']=dudx
+        self.gradients['dvdy']=dvdy
+        self.gradients['dvdx']=dvdx
+        # TODO and so on
+
+        #skip = 0
+        #self.u  = np.array(u).reshape(self.sizey,self.sizex)
+        #self.v  = np.array(w).reshape(self.sizey,self.sizex)
+        #self.u = self.u[:,skip:]
+        #self.v = self.v[:,skip:]
+
+
+@dataclass(init=False)
+class FieldSeries(DataSeries):
     """A class containing velocity time series data
 
-    Loads the input file with the NetCFD (.nc) format and
-    initialize the variables.
 
     """
 
@@ -55,25 +94,6 @@ class FieldSeries():
         self.v = v
         self.w = w
 
-    def set_coords(self,x,y,z):
-        self.x = x
-        self.y = y
-        self.z = z
-
-    def computeGradients(self):
-        dudy, dudx = np.gradient(self.vx,-self.dy/1000,self.dx/1000)
-        dvdy, dvdx = np.gradient(self.vy,-self.dy/1000,self.dx/1000)
-        self.gradients['dudy']=dudy
-        self.gradients['dudx']=dudx
-        self.gradients['dvdy']=dvdy
-        self.gradients['dvdx']=dvdx
-        # TODO and so on
-
-        #skip = 0
-        #self.u  = np.array(u).reshape(self.sizey,self.sizex)
-        #self.v  = np.array(w).reshape(self.sizey,self.sizex)
-        #self.u = self.u[:,skip:]
-        #self.v = self.v[:,skip:]
 
 """
 @dataclass
@@ -112,6 +132,7 @@ class ReynoldsStress():
 class WakeField():
     vel: FieldSeries = None
     vel_prime: FieldSeries = None
+    data: DataSeries = None
     dataset = None  # Tecplot dataset
     # We needs statistics for velocities and other vars
     vel_stats = VelocityStatistics()
@@ -133,7 +154,7 @@ class WakeField():
 
         :param CSname: _description_
         """
-        print('rotating by ' + str(self.param.aoa))
+        logger.info('rotating by ' + str(self.param.aoa))
         # Call the Tecplot dataset rotation function
         wt.rotate_dataset(self.dataset, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
         x_WT, z_WT = wt.transform_wake_coords(self.vel.x, self.vel.z, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
@@ -162,12 +183,25 @@ class WakeField():
         """
 
 
-    def interpolate_struct(self, variables = ['u', 'v', 'w']):
+    def interpolate_struct(self, coords = None, variables = ['u', 'v', 'w'], in_data = None):
         """Interpolate to a structured 2D dataset
+    
+        logger = fplog.get_main_app_logger()
 
 
         """
+        if coords is None:
+            x = self.x
+            z = self.z
 
+        
+        if in_data is None:
+            print('using default boundaries')
+            u = self.vel.u
+            v = self.vel.v
+            w = self.vel.w
+        xlim = (1.05, 1.65)
+            
         x0, z0 = xlim[0], -0.05
         x1, z1 = xlim[1], 0.25
 
@@ -177,10 +211,11 @@ class WakeField():
         print('shape of xi: ' + str(xi.shape))
         print('shape of zi: ' + str(zi.shape))
         print('mesh shape: ' + str(xmesh.shape))
-
-
+        print(x)
         for var in variables:
-            self.struct[var] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), u_WT[case], (xmesh, zmesh), method='cubic')
+            #self.struct[var] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), u_WT[case], (xmesh, zmesh), method='cubic')
+            #print(self.vel.get_var(var))
+            return xi, zi, scipy.interpolate.griddata((x, z), self.vel.get_var(var), (xmesh, zmesh), method='linear')
 
 
 
