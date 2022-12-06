@@ -175,8 +175,8 @@ class WakeField():
         self.cs = CSname
         self.set_coords(x_WT, self.y, z_WT)
 
-    def compute_rstresses(self, do_save = False):
-        self.stats.compute_rstresses(do_save = do_save, vel = self.vel)
+    def compute_rstresses(self):
+        self.vel_stats.compute_rstresses(vel = self.vel)
         """
         #uu,vv,ww,uv,uw,vw = ws.calc_rstresses(u,v,w)
         #self.rstresses = ReynoldsStress
@@ -332,18 +332,18 @@ class WakeField():
 
     def save_means(self, res_path=None):
         if res_path is None:
-            res_path = self.param.res_path
+            res_path = self.case.res_path
         file_prefix = self.case.case_name+'_' + self.case.plane_name
 
         filename = os.path.join(res_path, file_prefix + '_means.plt')
         #print(self.stats.mean)
-        tecreader.save_plt(self.vel_stats.mean, self.dataset, filename, addvars = True, removevars = True)
+        self.save_plt_file(self.vel_stats.mean, filename)
 
     def save_rstresses(self, rstress, res_path = None, file_prefix = None):
         if res_path is None:
-            res_path = self.param.res_path
+            res_path = self.case.res_path
         if file_prefix is None:
-            file_prefix = self.param.case_name+'_' + self.param.plane_name
+            file_prefix = self.case.case_name+'_' + self.case.plane_name
         # Save the results
 
         try:
@@ -356,7 +356,12 @@ class WakeField():
                 'uv': rstress['uv'], 'uw': rstress['uw'], 'vw': rstress['vw'], 'kt': rstress['kt']}
 
         filename = os.path.join(res_path, file_prefix + '_rstresses.plt')
+        self.save_plt_file(save_var, filename)
+
+    def save_plt_file(self, save_var, filename):
         tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
+        
+
 
     def compute_wake_quants(self):
         """
