@@ -38,7 +38,7 @@ class VelocityStatistics(Statistics):
         self.rs: ReynoldsStresses = ReynoldsStresses()
         self.an: AnisotropyTensor = AnisotropyTensor()
 
-    def compute_rstresses(self, vel, do_save = False, return_dict=False):
+    def compute_rstresses(self, vel, return_dict=False):
         self.rs.calc_rstresses(vel.u, vel.v, vel.w)
 
     def compute_anisotropy(self, vel = None, do_save = False):
