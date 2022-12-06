@@ -29,9 +29,9 @@ class Statistics():
 
 
 class VelocityStatistics(Statistics):
-    '''
+    """Pointwise statistics for a time series
 
-    '''
+    """
     def __init__(self):
         # initialize defaults
         Statistics.__init__(self)

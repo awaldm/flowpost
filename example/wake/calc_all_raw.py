@@ -36,41 +36,12 @@ import tecreader as tecreader
 import matplotlib.pyplot as plt
 import scipy.signal
 import flowpost.wake.wake_stats as ws
-from wake_config import WakeCaseParams
+from flowpost.configs.wake_config import WakeCaseParams
 from flowpost.wake.data import FieldSeries, WakeField
 import extract_centerline as ex
+import flowpost.utils.loaders
 
 
-def get_rawdata(case_name, plane_name, case_type):
-
-    param = WakeCaseParams(case_name, plane_name, case_type)
-    print(param)
-    # Get parameter dict from config file based on above input
-    param.end_i = 5500
-    param.plt_path = '/home/andreas/data/CRM_example_data/low_speed/'
-    # Get the data time series. The uvw data are arrays of shape (n_points, n_samples). dataset is a Tecplot dataset.
-    in_data, dataset = tecreader.get_series(param.plt_path, param.zonelist, param.start_i, param.end_i, \
-        read_velocities=True,read_cp=False, read_vel_gradients=False, stride = param.di, \
-        parallel=False, verbose=True)
-
-    # Create a FieldSeries object to hold the velocity vectors
-    vel  = FieldSeries()
-    vel.set_velocities(in_data['u'], in_data['v'], in_data['w'])
-
-    print('done reading. shape of u: ' + str(in_data['u'].shape))
-    # Get the coordinates as arrays and add them to the velocity data
-    x,y,z = tecreader.get_coordinates(dataset, caps=True)
-
-    vel.set_coords(x,y,z)
-    wake = WakeField()
-    wake.vel = vel
-    wake.dataset = dataset
-    wake.param = param
-    wake.set_coords(x,y,z)
-
-
-    # Return the FieldSeries object and the Tecplot dataset
-    return wake
 
 
 ######################################################################
@@ -85,7 +56,7 @@ if __name__ == "__main__":
     case_name = 'CRM_v38h_DDES_dt100_ldDLR_CFL2_eigval015_pswitch1_tau2017_2'
     #par = WakeCaseParams(case_name, plane_name, case_type)
 
-    wake = get_rawdata(case_name, plane_name, case_type)
+    wake = flowpost.utils.loaders.get_rawdata(case_name, plane_name, case_type)
 
     par = wake.param
     # Get the coordinates as arrays
@@ -109,7 +80,7 @@ if __name__ == "__main__":
 
     print(wake.x)
     wake.vel.n_samples = wake.vel.u.shape[-1]
-    print(wake.stats.__dict__)
+    print(wake.vel_stats.__dict__)
 
     # compute velocty means
     wake.compute_means()
@@ -145,7 +116,7 @@ if __name__ == "__main__":
 
 
     #res.save_anisotropy()
-
+    """
     ## Run POD
     from flowpost.wake.modal import POD_utils, modal_utils
 
@@ -180,4 +151,4 @@ if __name__ == "__main__":
     POD_utils.write_POD_coeffs(wake.param.res_path, case_name, POD_time, coeffs[:,0:num_modes])
     POD_utils.write_POD_eigvals(wake.param.res_path, case_name, eigvals)
 
-
+    """

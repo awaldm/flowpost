@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 import flowpost.wake.wake_stats as ws
-from wake_config import WakeCaseParams
+from flowpost.common.wake_config import WakeCaseParams
+from flowpost.common.case import Case
+#from flowpost.utils import loaders
+
 import tecreader as tecreader
 import os
 import numpy as np
@@ -18,19 +21,15 @@ class DataField():
         struct_data = False
 
 class Coordinates:
-    def __init__(self, x=None,y=None,z=None):
+    def __init__(self, aoa=0, x=None,y=None,z=None):
         self.x = x
         self.y = y
         self.z = z
+
 
 
 @dataclass(init=False)
 class DataSeries():
-    def set_coords(self,x,y,z):
-        self.x = x
-        self.y = y
-        self.z = z
-        # this does not work
 
     def get_vars(self, var_list):
         print(self.__dict__.keys())
@@ -141,24 +140,36 @@ class WakeField():
     coords: Coordinates = None
     param: WakeCaseParams = None
     datatype: str = 'tecplot'
-
+    aoa: float = 0
     #def set_coords(self, x, y, z):
     #    self.coords = Coordinates(x=x, y=y, z=z)
-    def set_coords(self ,x, y, z):
+    case: Case = None
+    def set_coords(self,x,y,z):
         self.x = x
         self.y = y
         self.z = z
+        self.set_PMR()
+        # this does not work
 
-    def rotate_CS(self, CSname):
+    def set_PMR(self, x_PMR=0, z_PMR=0):
+        self.x_PMR = x_PMR
+        self.z_PMR = z_PMR
+
+
+    def rotate_CS(self, CSname, aoa = None):
         """Rotate the coordinate system
 
         :param CSname: _description_
         """
-        logger.info('rotating by ' + str(self.param.aoa))
+        if aoa == None:
+            aoa = self.aoa
+        logger.info('rotating by ' + str(aoa))
         # Call the Tecplot dataset rotation function
-        wt.rotate_dataset(self.dataset, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
-        x_WT, z_WT = wt.transform_wake_coords(self.vel.x, self.vel.z, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
-        u_WT, w_WT = wt.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.param.x_PMR, self.param.z_PMR, self.param.aoa)
+        print(self.x_PMR)
+        print(self.z_PMR)
+        wt.rotate_dataset(self.dataset, self.x_PMR, self.z_PMR, aoa)
+        x_WT, z_WT = wt.transform_wake_coords(self.x, self.z, self.x_PMR, self.z_PMR, aoa)
+        u_WT, w_WT = wt.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.x_PMR, self.z_PMR, aoa)
         self.vel.u = u_WT
         self.vel.w = w_WT
         self.cs = CSname
@@ -319,9 +330,10 @@ class WakeField():
             print('no variable!')
 
 
-    def save_means(self):
-        res_path = self.param.res_path
-        file_prefix = self.param.case_name+'_' + self.param.plane_name
+    def save_means(self, res_path=None):
+        if res_path is None:
+            res_path = self.param.res_path
+        file_prefix = self.case.case_name+'_' + self.case.plane_name
 
         filename = os.path.join(res_path, file_prefix + '_means.plt')
         #print(self.stats.mean)
@@ -378,10 +390,13 @@ class WakeField():
             out[key] = value
         return out
 
-    def transform(self):
-        ws.rotate_dataset(self.dataset, param.x_PMR, param.z_PMR, param.aoa)
-        x_WT, z_WT = ws.transform_wake_coords(vel.x,vel.z, param.x_PMR, param.z_PMR, param.aoa)
-        u_WT, w_WT = ws.rotate_velocities(vel.u, vel.v, vel.w, param.x_PMR, param.z_PMR, param.aoa)
+    def transform(self, aoa = None):
+        if aoa is None:
+            aoa = self.aoa
+        logger.info('rotating by ' +str(aoa))
+        ws.rotate_dataset(self.dataset, param.x_PMR, param.z_PMR, aoa)
+        x_WT, z_WT = ws.transform_wake_coords(vel.x,vel.z, param.x_PMR, param.z_PMR, aoa)
+        u_WT, w_WT = ws.rotate_velocities(vel.u, vel.v, vel.w, param.x_PMR, param.z_PMR, aoa)
 
 
     def save_anisotropy(self, atensor, ev, C, res_path = None, file_prefix = None):
@@ -434,6 +449,13 @@ class WakeField():
 
             filename = os.path.join(res_path, file_prefix + '_ind_samples.plt')
             tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
+
+    def load_raw(self, raw_type='plt_series'):
+        logger.info('loading zone number ' + str(self.case.inputs.zone_list))
+        in_data, dataset = loaders.load_plt_series(self.case.inputs.in_path, self.case.inputs.zone_list, self.case.inputs.start_i, self.case.inputs.end_i, read_velocities = True, read_cp=False, read_vel_gradients=False, stride = self.case.inputs.di, parallel=False, verbose=False)
+
+        self.wake = loaders.create_wake_object(in_data, dataset)
+
 
 class VelocityField(DataField):
     def __init__(self, x=None,z=None,v=None,u=None,w=None):

@@ -118,7 +118,7 @@ def TKE_production(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, uu,vv,w
     return pk_total, pk_normal, pk_shear
 
 
-
+"""
 def calc_rstresses(u,v,w, return_dict=False):
     reshaped = False
     shape = u.shape
@@ -246,7 +246,7 @@ def get_rstresses(in_path, case=None, name=None, force=False, shape=(300,435), p
 #            f.close()
 
     return rstress
-
+"""
 
 def compute_rstresses_1D(u,v,w):
     uu = np.mean(u**2, axis=-1)
