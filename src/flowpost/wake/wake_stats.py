@@ -45,6 +45,24 @@ def rotate_gradients(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, alpha
 
 
 
+def min_vel_pos(x,z,u):
+    """Return the z position of the minimum velocity at each position in the vector z
+
+    This is typically by supplying interpolated data, i.e. the output of :obj:`flowpost.wake.interpolate_struct`
+    
+
+    :param x: _description_
+    :param z: z coordinate vector
+    :param u: streamwise velocity data, shape struct
+    :return: _description_
+    """
+    assert u.shape[0] == z.shape[0]
+    assert len(z.shape) == 1
+
+    return z[np.argmin(np.where(u==0, u.max(), u), axis=0)]
+
+
+
 
 def compute_fluctuations(u,v,w):
     '''
@@ -70,10 +88,10 @@ def compute_fluctuations(u,v,w):
     w_flu = w - np.mean(w, axis=time_dim,keepdims=True)
     return u_flu, v_flu, w_flu
 
-def compute_means(u,v,w):
-    u_mean = np.mean(u, axis=-1,keepdims=True)
-    v_mean = np.mean(v, axis=-1,keepdims=True)
-    w_mean = np.mean(w, axis=-1,keepdims=True)
+def compute_means(u,v,w, keepdims = True):
+    u_mean = np.mean(u, axis=-1,keepdims=keepdims)
+    v_mean = np.mean(v, axis=-1,keepdims=keepdims)
+    w_mean = np.mean(w, axis=-1,keepdims=keepdims)
     return u_mean, v_mean, w_mean
 
 

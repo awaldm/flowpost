@@ -376,6 +376,8 @@ class WakeField():
         pass
 
     def compute_fluctuations(self):
+        """Compute velocity fluctuations by subtracting the means
+        """
         self.vel.uprime, self.vel.vprime, self.vel.wprime = ws.compute_fluctuations(self.vel.u, self.vel.v, self.vel.w)
 
     def compute_anisotropy(self, do_save = False):

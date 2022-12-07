@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.polynomial.polynomial as poly
 import scipy.interpolate
-
+"""
 def interpolate_struct_data(x, z, var):
     xlim = (1.15, 1.75) # eta0603
 
@@ -21,10 +21,9 @@ def interpolate_struct_data(x, z, var):
     #vv[case] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), vv_WT[case], (xmesh, zmesh), method='cubic')
     #ww[case] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), ww_WT[case], (xmesh, zmesh), method='cubic')
     #uw[case] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), uw_WT[case], (xmesh, zmesh), method='cubic')
+"""
 
 
-def wake_min_pos(x,z,u):
-    return z[np.argmin(np.where(u==0, u.max(), u), axis=0)]
 
 # need means!
 def fit_line(x, z):
