@@ -8,6 +8,7 @@ Data output: one plt file each containing the anisotropy tensor, the eigenvalues
 
 Required input:
 
+
 case_name: string
     input for conf.WakeCaseParams() in order to obtain the parameters for the data reader
 plane: string

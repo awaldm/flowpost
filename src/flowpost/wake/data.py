@@ -140,7 +140,6 @@ class WakeField():
     coords: Coordinates = None
     param: WakeCaseParams = None
     datatype: str = 'tecplot'
-    aoa: float = 0
     #def set_coords(self, x, y, z):
     #    self.coords = Coordinates(x=x, y=y, z=z)
     case: Case = None
@@ -162,7 +161,7 @@ class WakeField():
         :param CSname: _description_
         """
         if aoa == None:
-            aoa = self.aoa
+            aoa = self.case.aoa
         logger.info('rotating by ' + str(aoa))
         # Call the Tecplot dataset rotation function
         print(self.x_PMR)
@@ -194,10 +193,9 @@ class WakeField():
         """
 
 
-    def interpolate_struct(self, coords = None, variables = ['u', 'v', 'w'], in_data = None):
+    def interpolate_struct(self, coords = None, variables = ['u', 'v', 'w'], xlim = None, zlim = None, in_data = None, xsize = 100, zsize = 250):
         """Interpolate to a structured 2D dataset
     
-        logger = fplog.get_main_app_logger()
 
 
         """
@@ -211,22 +209,30 @@ class WakeField():
             u = self.vel.u
             v = self.vel.v
             w = self.vel.w
-        xlim = (1.05, 1.65)
-            
-        x0, z0 = xlim[0], -0.05
-        x1, z1 = xlim[1], 0.25
 
-        xi, zi = np.linspace(x0, x1, 100), np.linspace(z0, z1, 250)
+        if xlim is None:
+            xlim = (1.05, 1.65)
+        if zlim is None:
+            zlim = (-0.05, 0.25)
+            
+        x0, z0 = xlim[0], zlim[0]
+        x1, z1 = xlim[1], zlim[1]
+
+        xi, zi = np.linspace(x0, x1, xsize), np.linspace(z0, z1, zsize)
         xmesh, zmesh = np.meshgrid(xi,zi)
 
         print('shape of xi: ' + str(xi.shape))
         print('shape of zi: ' + str(zi.shape))
         print('mesh shape: ' + str(xmesh.shape))
-        print(x)
+        struct = {}
         for var in variables:
             #self.struct[var] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), u_WT[case], (xmesh, zmesh), method='cubic')
             #print(self.vel.get_var(var))
-            return xi, zi, scipy.interpolate.griddata((x, z), self.vel.get_var(var), (xmesh, zmesh), method='linear')
+            struct['xi']  = xi
+            struct['zi']  = zi
+            struct[var]  = scipy.interpolate.griddata((x, z), self.vel.get_var(var), (xmesh, zmesh), method='linear')
+
+        return struct
 
 
 
