@@ -2,37 +2,59 @@ import tecreader as tecreader
 from flowpost.wake.data import FieldSeries, WakeField
 #from flowpost.configs.wake_config import WakeCaseParams
 from flowpost.common.case import Case
+import numpy as np
+import logging
+logger = logging.getLogger(__name__)
 
 class Loader:
     def __init__(self):
         self.in_data = None
         self.case = None
+        self.dataset = None
     def set_case(self, case):
         self.case = case
 
 
     def load_plt_series(self):
-           self.in_data, self.dataset = tecreader.get_series(self.case.inputs.in_path, self.case.inputs.zone_list, self.case.inputs.start_i, self.case.inputs.end_i, \
+        logger.info(self.case.inputs.start_i)
+        logger.info(self.case.inputs.end_i)
+        logger.info(self.case.inputs.di)
+
+        self.in_data, self.dataset = tecreader.get_series(self.case.inputs.in_path, self.case.inputs.zone_list, self.case.inputs.start_i, self.case.inputs.end_i, \
             read_velocities=True,read_cp=False, read_vel_gradients=False, stride = self.case.inputs.di, \
             parallel=False, verbose=True)
 
 
-    def create_wake_object(self):
+    def create_wake_object(self, in_data = None):
+        """Generate wake object from the loader
+
+        :return: _description_
+        """
+
+        # If new data is passed, set it as self.in_data
+        if in_data is not None:
+            self.in_data = {}
+            self.in_data['u'] = in_data['u']
+            self.in_data['v'] = in_data['v']
+            self.in_data['w'] = in_data['w']
 
         vel  = FieldSeries()
-
+        
         vel.set_velocities(self.in_data['u'], self.in_data['v'], self.in_data['w'])
-
+        
         print('done reading. shape of u: ' + str(self.in_data['u'].shape))
-        # Get the coordinates as arrays and add them to the velocity data
-        x,y,z = tecreader.get_coordinates(self.dataset, caps=True)
 
-        #vel.set_coords(x,y,z)
         wake = WakeField()
-        wake.vel = vel
-        wake.dataset = self.dataset
-        #wake.param = param
-        wake.set_coords(x,y,z)
+        wake.vel = vel        
+
+        # Get the coordinates as arrays and add them to the velocity data
+        if self.dataset is not None:
+            wake.dataset = self.dataset
+            x,y,z = tecreader.get_coordinates(self.dataset, caps=True)
+            #wake.param = param
+            wake.set_coords(x,y,z)
+        else:
+            wake.set_coords(in_data['x'], np.zeros_like(in_data['x']), in_data['z'])
         return wake
 
 def load_plt_series(plt_path, zonelist, start_i, end_i, read_velocities = True, read_cp=False, read_vel_gradients=False, stride = 10, parallel=False, verbose=False):
