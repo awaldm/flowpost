@@ -166,7 +166,8 @@ class WakeField():
         # Call the Tecplot dataset rotation function
         print(self.x_PMR)
         print(self.z_PMR)
-        wt.rotate_dataset(self.dataset, self.x_PMR, self.z_PMR, aoa)
+        if self.dataset is not None:
+            wt.rotate_dataset(self.dataset, self.x_PMR, self.z_PMR, aoa)
         x_WT, z_WT = wt.transform_wake_coords(self.x, self.z, self.x_PMR, self.z_PMR, aoa)
         u_WT, w_WT = wt.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.x_PMR, self.z_PMR, aoa)
         self.vel.u = u_WT
@@ -192,11 +193,36 @@ class WakeField():
             self.save_rstresses(self.rstresses, res_path = self.param.res_path, file_prefix = self.param.case_name+'_'+ self.param.plane_name)
         """
 
+    def interpolation_grid(self, xlim, zlim, xsize, zsize):
+        """Helper function to obtain a structured 2D interpolation target grid in a given region 
+
+        :param xlim: _description_
+        :param zlim: _description_
+        :param xsize: _description_
+        :param zsize: _description_
+        :return: _description_
+        """
+        x0, z0 = xlim[0], zlim[0]
+        x1, z1 = xlim[1], zlim[1]
+
+        xi, zi = np.linspace(x0, x1, xsize), np.linspace(z0, z1, zsize)
+        xmesh, zmesh = np.meshgrid(xi,zi)
+        return xi, zi, xmesh, zmesh
+
+
+    def interpolate_struct_field(self, coords = None, var = None, xlim = None, zlim = None, xsize = 100, zsize = 250):
+        if coords is None:
+            x = self.x
+            z = self.z
+
+        xi, zi, xmesh, zmesh = self.interpolation_grid(xlim, zlim, xsize, zsize)
+        return xi, zi, scipy.interpolate.griddata((x, z), var, (xmesh, zmesh), method='linear')
+
+
 
     def interpolate_struct(self, coords = None, variables = ['u', 'v', 'w'], xlim = None, zlim = None, in_data = None, xsize = 100, zsize = 250):
         """Interpolate to a structured 2D dataset
     
-
 
         """
         if coords is None:
@@ -209,27 +235,30 @@ class WakeField():
             u = self.vel.u
             v = self.vel.v
             w = self.vel.w
+        #else:
+
 
         if xlim is None:
             xlim = (1.05, 1.65)
         if zlim is None:
             zlim = (-0.05, 0.25)
             
-        x0, z0 = xlim[0], zlim[0]
-        x1, z1 = xlim[1], zlim[1]
+        xi, zi, xmesh, zmesh = self.interpolation_grid(xlim, zlim, xsize, zsize)
 
-        xi, zi = np.linspace(x0, x1, xsize), np.linspace(z0, z1, zsize)
-        xmesh, zmesh = np.meshgrid(xi,zi)
 
         print('shape of xi: ' + str(xi.shape))
         print('shape of zi: ' + str(zi.shape))
         print('mesh shape: ' + str(xmesh.shape))
+
         struct = {}
+        struct['xi']  = xi
+        struct['zi']  = zi
+        struct['xmesh'] = xmesh
+        struct['zmesh'] = zmesh
         for var in variables:
             #self.struct[var] = scipy.interpolate.griddata((x_WT[case], z_WT[case]), u_WT[case], (xmesh, zmesh), method='cubic')
             #print(self.vel.get_var(var))
-            struct['xi']  = xi
-            struct['zi']  = zi
+
             struct[var]  = scipy.interpolate.griddata((x, z), self.vel.get_var(var), (xmesh, zmesh), method='linear')
 
         return struct
@@ -367,6 +396,8 @@ class WakeField():
     def save_plt_file(self, save_var, filename):
         tecreader.save_plt(save_var, self.dataset, filename, addvars = True, removevars = True)
         
+    #def save_numpy(self, save_var, filename):
+    #    np.savez(filename)
 
 
     def compute_wake_quants(self):

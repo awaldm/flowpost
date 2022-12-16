@@ -8,7 +8,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "main": {
-            "format": "%(levelname)s:%(module)s:%(funcName)s:%(lineno)d " "%(message)s",
+            "format": "%(levelname)s:%(module)s:%(funcName)s:%(lineno)d  " "%(message)s",
             "datefmt": "[%X]",
             }
         },

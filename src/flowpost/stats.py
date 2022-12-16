@@ -42,13 +42,18 @@ class VelocityStatistics(Statistics):
         self.rs.calc_rstresses(vel.u, vel.v, vel.w)
 
     def compute_anisotropy(self, vel = None, do_save = False):
+        """Compute the anisotropy related quantities: the tensor itself and the invariants
+        """
+        
         #self.stats.atensor = AnisotropyData
+
+        """
         if self.rs.is_empty():
             self.rs = ReynoldsStresses()
             self.rs.calc_rstresses(vel.u,vel.v,vel.w)
             self.rs.kt = 0.5* (self.rs.uu + self.rs.vv + self.rs.ww)
+        """    
         # Compute the anisotropy tensor
-        print(self.rs.kt)
         a_uu, a_vv, a_ww, a_uv, a_uw, a_vw = self.an.compute_atensor(self.rs.uu, \
         self.rs.vv, \
         self.rs.ww, \
@@ -57,8 +62,8 @@ class VelocityStatistics(Statistics):
         self.rs.vw, \
         self.rs.kt)
         # Compute second and third invariants of the anisotropy tensor
-        atensor = {'uu': a_uu, 'vv': a_vv, 'ww': a_ww, 'uv': a_uv, 'uw': a_uw, 'vw': a_vw}
-
+        #atensor = {'uu': a_uu, 'vv': a_vv, 'ww': a_ww, 'uv': a_uv, 'uw': a_uw, 'vw': a_vw}
+        #self.an.set_values(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
         self.an.invar2, self.an.invar3, self.an.ev = self.an.compute_anisotropy_invariants(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
         # Compute barycentric coordinates
         self.an.C, self.an.xb, self.an.yb = self.an.compute_anisotropy_barycentric(self.an.ev)
@@ -83,17 +88,34 @@ class AnisotropyTensor():
         self.vw = a_vw
 
 
+    
+    def lumley_map_boundaries(self):
+        #rechts: axisymmetry
+        Jx1=np.linspace(0,2./9.,300)
+        Jy1=(3./2.) * (Jx1 *(4./3.))**(2./3.)
+        #% links: axisymmetry
+        Jx2=np.linspace(0,-1./36.,50)
+        Jy2=3./2. * (-Jx2  *4.0/3.0)**(2./3.)
+        #% oben: 2-component-turbulence
+        Jx3=np.linspace(-1./36.,2./9.,300)
+        Jy3=2./9. + Jx3*2
+        return Jx1, Jy1, np.flipud(Jx2), np.flipud(Jy2), Jx3, Jy3
+
+
+      
+
 
     def compute_atensor(self,uu, vv, ww, uv, uw, vw, kt, return_tensor = False):
         '''
         anisotropy tensor from reynolds stress tensor components
         '''
-        a_uu = np.divide(uu, (2.*kt)) - (1/3)
-        a_vv = np.divide(vv, (2.*kt)) - (1/3)
-        a_ww = np.divide(ww, (2.*kt)) - (1/3)
-        a_uv = np.divide(uv, (2.*kt))
-        a_vw = np.divide(vw, (2.*kt))
-        a_uw = np.divide(uw, (2.*kt))
+        # The nan_to_num is necessary to catch places where kt=0 to avoid division by zero errors
+        a_uu = np.nan_to_num(np.divide(uu, (2.*kt))) - (1/3)
+        a_vv = np.nan_to_num(np.divide(vv, (2.*kt))) - (1/3)
+        a_ww = np.nan_to_num(np.divide(ww, (2.*kt))) - (1/3)
+        a_uv = np.nan_to_num(np.divide(uv, (2.*kt)))
+        a_vw = np.nan_to_num(np.divide(vw, (2.*kt)))
+        a_uw = np.nan_to_num(np.divide(uw, (2.*kt)))
         if return_tensor:
             return self.atensor_components_to_array(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
         else:
@@ -108,6 +130,7 @@ class AnisotropyTensor():
         transposition of points to dim 0 is necessary to parallelize eigenvalue computation
         rationale: np.linalg.eig computes eigenvalues
         '''
+        print(a_uu.shape)
         atensor = np.array([[a_uu, a_uv, a_uw],[a_uv, a_vv, a_vw], [a_uw, a_vw, a_ww]])
         atensor = np.squeeze(atensor)
         return np.transpose(atensor, [2,0,1])
@@ -119,7 +142,6 @@ class AnisotropyTensor():
 
         atensor = self.atensor_components_to_array(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw)
         print('shape of atensor: ' + str(atensor.shape))
-
         ev, _ = np.linalg.eig(atensor)
         ev = np.transpose(ev, [1,0])
         for i in range(ev.shape[1]):
@@ -160,16 +182,27 @@ class ReynoldsStresses():
     '''
 
     '''
+    """
+    @property
+    def kt(self):
+        if self._kt.any() == None:
+            self._kt = 0.5* (self.uu + self.vv + self.ww)
+        return self._kt
 
+    @kt.setter
+    def kt(self, a):
+        self._kt = a
+    """
     def __init__(self):
         # initialize defaults
         #VelocityStatistics.__init__(self)
-        self.uu: np.ndarray = None
-        self.uv: np.ndarray = None
-        self.uw: np.ndarray = None
-        self.vw: np.ndarray = None
-        self.uv: np.ndarray = None
-        self.vw: np.ndarray = None
+        self.uu: np.ndarray = np.array([])
+        self.uv: np.ndarray = np.array([])
+        self.uw: np.ndarray = np.array([])
+        self.vw: np.ndarray = np.array([])
+        self.uv: np.ndarray = np.array([])
+        self.vw: np.ndarray = np.array([])
+        #self._kt: np.ndarray = np.array([])
 
     def is_empty(self):
         return self.uu == None
@@ -232,3 +265,4 @@ class ReynoldsStresses():
             self.uv.reshape(newshape)
             self.uw.reshape(newshape)
             self.vw.reshape(newshape)
+        self.kt = 0.5* (self.uu + self.vv + self.ww)
