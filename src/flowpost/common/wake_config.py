@@ -20,7 +20,7 @@ Andreas Waldmann, 2018
 '''
 
 
-class WakeCaseParams():
+class CaseParams():
     def __init__(self, case_name, plane, type='CRM_LSS'):
 
         self.case_name = case_name

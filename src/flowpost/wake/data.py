@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import flowpost.wake.wake_stats as ws
-from flowpost.common.wake_config import WakeCaseParams
+from flowpost.common.wake_config import CaseParams
 from flowpost.common.case import Case
 #from flowpost.utils import loaders
 
@@ -30,6 +30,12 @@ class Coordinates:
 
 @dataclass(init=False)
 class DataSeries():
+
+
+    def set_vars(self, var_list: dict):
+        for key,val in var_list.items():
+            setattr(self, key, val)
+
 
     def get_vars(self, var_list):
         print(self.__dict__.keys())
@@ -66,10 +72,13 @@ class FieldSeries(DataSeries):
 
 
     """
+    
+    u: np.ndarray = None
+    v: np.ndarray = None
+    w: np.ndarray = None
 
-    u: np.ndarray
-    v: np.ndarray
-    w: np.ndarray
+    def is_empty(self):
+        return (self.u is None) and (self.v is None) and (self.w is None)
 
     """
     def __init__(self, time=0, x=None,y=None, z=None,u=None,v=None, w=None, struct_data=False, planar=True):
@@ -124,25 +133,53 @@ class ReynoldsStress():
 
 
 """
+#@dataclass
+class FieldData():
+
+    def __init__(self, cs: str = 'AC', type = 'plane',
+        param: CaseParams = None,
+        datatype: str = 'tecplot',
+        tec_dataset = None,  # Tecplot dataset
+        data: DataSeries = None,
+
+        case: Case = None
+        ):
+
+        self.cs = cs
+        self.param = param
+        self.type = type
+        
+        self.datatype = datatype
+        self.tec_dataset = tec_dataset
+        self.case = case
+        if data is None:
+            self.data = DataSeries()
+        else:
+            self.data = data
 
 
-
-@dataclass
-class WakeField():
-    vel: FieldSeries = None
-    vel_prime: FieldSeries = None
-    data: DataSeries = None
-    dataset = None  # Tecplot dataset
-    # We needs statistics for velocities and other vars
-    vel_stats = VelocityStatistics()
-    #stats: FieldStats = None
+    '''
     cs: str = 'AC'
+    type = 'plane'
     coords: Coordinates = None
-    param: WakeCaseParams = None
+    param: CaseParams = None
     datatype: str = 'tecplot'
+    tec_dataset = None  # Tecplot dataset
+    data: DataSeries = None
+    '''
     #def set_coords(self, x, y, z):
     #    self.coords = Coordinates(x=x, y=y, z=z)
-    case: Case = None
+
+    def set_data(self, new_data):
+        self.data.set_vars(new_data)
+        #for key in new_data.keys:
+        #    setattrself.data = x
+        #self.y = y
+        #self.z = z
+        #self.set_PMR()
+        # this does not work
+
+
     def set_coords(self,x,y,z):
         self.x = x
         self.y = y
@@ -153,6 +190,38 @@ class WakeField():
     def set_PMR(self, x_PMR=0, z_PMR=0):
         self.x_PMR = x_PMR
         self.z_PMR = z_PMR
+
+    
+    def rotate_CS(self, CSname, aoa = None):
+        """Rotate the coordinate system
+
+        :param CSname: _description_
+        """
+        if aoa == None:
+            aoa = self.case.aoa
+        logger.info('rotating by ' + str(aoa))
+        # Call the Tecplot dataset rotation function
+        print(self.x_PMR)
+        print(self.z_PMR)
+        if self.dataset is not None:
+            wt.rotate_dataset(self.tec_dataset, self.x_PMR, self.z_PMR, aoa)
+        x_WT, z_WT = wt.transform_wake_coords(self.x, self.z, self.x_PMR, self.z_PMR, aoa)
+
+        self.cs = CSname
+        self.set_coords(x_WT, self.y, z_WT)
+
+@dataclass
+class WakeField(FieldData):
+
+    vel: FieldSeries = None
+    vel_prime: FieldSeries = None
+
+    # We needs statistics for velocities and other vars
+    vel_stats = VelocityStatistics()
+    #stats: FieldStats = None
+    
+    
+
 
 
     def rotate_CS(self, CSname, aoa = None):
@@ -167,11 +236,12 @@ class WakeField():
         print(self.x_PMR)
         print(self.z_PMR)
         if self.dataset is not None:
-            wt.rotate_dataset(self.dataset, self.x_PMR, self.z_PMR, aoa)
+            wt.rotate_dataset(self.tec_dataset, self.x_PMR, self.z_PMR, aoa)
         x_WT, z_WT = wt.transform_wake_coords(self.x, self.z, self.x_PMR, self.z_PMR, aoa)
-        u_WT, w_WT = wt.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.x_PMR, self.z_PMR, aoa)
-        self.vel.u = u_WT
-        self.vel.w = w_WT
+        if self.vel.is_empty() == False:
+            u_WT, w_WT = wt.rotate_velocities(self.vel.u, self.vel.v, self.vel.w, self.x_PMR, self.z_PMR, aoa)
+            self.vel.u = u_WT
+            self.vel.w = w_WT
         self.cs = CSname
         self.set_coords(x_WT, self.y, z_WT)
 

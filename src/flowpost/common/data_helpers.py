@@ -4,7 +4,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
 def create_interpolation_line(x, zlim, num=100):
 
     
@@ -16,10 +15,17 @@ def create_interpolation_line(x, zlim, num=100):
     return xi, zi
 
 
-def interpolate_line(xfield, zfield, xpos = None, zlim = None, in_data = None, num = 100):
-    xi, zi = create_interpolation_line(xpos, zlim, num=num)
+def interpolate_line(xfield, zfield, xpos = None, zlim = None, in_data = None, num = 100, xi= None, zi = None, method='cubic'):
+    """Interpolate data from a arbitrary 2D field to a line
+
+    TODO: refactor possible inputs. we need to be able to robustly handle prescribed coordinates or just boundaries
+
+    """
+    if num is not None:
+        xi, zi = create_interpolation_line(xpos, zlim, num=num)
+
     
-    return xi, zi, scipy.interpolate.griddata((xfield,zfield), in_data, (xi, zi), method='cubic')
+    return xi, zi, scipy.interpolate.griddata((xfield, zfield), in_data, (xi, zi), method=method)
 
 
 
