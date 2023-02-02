@@ -79,7 +79,8 @@ class AnisotropyTensor():
     uv: np.ndarray = None
     uw: np.ndarray = None
     vw: np.ndarray = None
-    def set_values(a_uu, a_vv, a_ww, a_uv, a_uw, a_vw):
+
+    def set_values(self, a_uu, a_vv, a_ww, a_uv, a_uw, a_vw):
         self.uu = a_uu
         self.vv = a_vv
         self.ww = a_ww
@@ -87,25 +88,7 @@ class AnisotropyTensor():
         self.uw = a_uw
         self.vw = a_vw
 
-
-    
-    def lumley_map_boundaries(self):
-        #rechts: axisymmetry
-        Jx1=np.linspace(0,2./9.,300)
-        Jy1=(3./2.) * (Jx1 *(4./3.))**(2./3.)
-        #% links: axisymmetry
-        Jx2=np.linspace(0,-1./36.,50)
-        Jy2=3./2. * (-Jx2  *4.0/3.0)**(2./3.)
-        #% oben: 2-component-turbulence
-        Jx3=np.linspace(-1./36.,2./9.,300)
-        Jy3=2./9. + Jx3*2
-        return Jx1, Jy1, np.flipud(Jx2), np.flipud(Jy2), Jx3, Jy3
-
-
-      
-
-
-    def compute_atensor(self,uu, vv, ww, uv, uw, vw, kt, return_tensor = False):
+    def compute_atensor(self, uu, vv, ww, uv, uw, vw, kt, return_tensor=False):
         '''
         anisotropy tensor from reynolds stress tensor components
         '''
@@ -172,10 +155,6 @@ class AnisotropyTensor():
         xb = C[0,:] + 0.5*C[2,:]
         yb = (np.sqrt(3.0)/2.0) * C[2,:]
         return C, xb, yb
-
-
-
-
 
 
 class ReynoldsStresses():
