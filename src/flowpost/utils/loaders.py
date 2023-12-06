@@ -81,7 +81,7 @@ class Loader:
         # If new data is passed, set it as self.in_data
         if in_data is not None:
             self.in_data = {}
-            for key in in_data.keys:
+            for key in in_data.keys():
                 self.in_data[key] = in_data[key]
                 
         # Create an object

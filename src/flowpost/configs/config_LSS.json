@@ -1,8 +1,8 @@
 {
 "name": "CRM_LSS",
-"in_path": "/home/andreas/data/CRM_example_data/low_speed/",
+"in_path": "/mnt/scratch/LFZAero_share/TAUpost/test_data/CRM_LSS/",
 "in_data_type": "plt_series",
-"res_path": "/home/andreas/code/flowpost/example/wake/example_results",
+"res_path": "/home/iagwaldm/code/flowpost/example/wake/example_results/",
 "start_i": 5000,
 "end_i": 5300,
 "di": 10,
@@ -14,4 +14,3 @@
 "eta283"
 ]
 }
-
